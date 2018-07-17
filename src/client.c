@@ -17,8 +17,8 @@ void * send_thread(void *arg){
             return NULL;
         }
         memset(buf, 0, sizeof(buf));
-        return NULL;
     }
+    return NULL;
 }
 
 void * recv_thread(void *arg){
@@ -41,8 +41,9 @@ void * recv_thread(void *arg){
         }
         printf("from %s: %s", inet_ntoa(model->addr->sin_addr), buf);
         memset(buf, 0, sizeof(buf));
-        return NULL;
+        
     }
+    return NULL;
 }
 
 int main(int argc, char const *argv[])
@@ -59,6 +60,8 @@ int main(int argc, char const *argv[])
     addr.sin_family = AF_INET;
 
     addr.sin_addr.s_addr = inet_addr("192.168.1.199");
+
+    addr.sin_port = htons(8080);
 
     // connect to server 
     int numx = connect(st, (struct sockaddr *) &addr, sizeof(addr));
