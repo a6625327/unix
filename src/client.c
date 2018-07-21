@@ -1,95 +1,101 @@
 #include "../include/client.h"
 
-// send message
-void * send_thread(void *arg){
+void *send_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
     }
 
-    int st = *(int *) arg;
-    char buf[1024] = {0};
+    RecvModel *m = (RecvModel *)arg;
+    int send_len = 0;
+    int send_ret = 1;
 
-    while(1){
-        read(STDIN_FILENO, buf, sizeof(buf));
-        if(send(st, buf, strlen(buf), 0) == -1){
-            printf("send failed! error message : %s\n", strerror(errno));
-            return NULL;
-        }
-        memset(buf, 0, sizeof(buf));
+    int st = m->st;
+    FILE *fp = (FILE *)m->data;
+    char buf[BUFF_SIZE] = {0};
+
+    while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
+        send_ret = send(st, buf, send_len, 0);
     }
+    if(send_ret == -1){
+        printf("send error!\n");
+    }
+
+    fclose(fp);
     return NULL;
 }
 
-void * recv_thread(void *arg){
+void *recv_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
     }
 
-    RecvModel *model = (RecvModel *) arg;
+    FILE *fp = tmpfile();
+
+    RecvModel *m = (RecvModel *)arg;
+    m->data = (void *)fp;
+
     int flag = 0;
-    char buf[1024] = {0};
+    char buf[BUFSIZ] = {0};
+
     while(1){
-        flag = recv(model->st, buf, sizeof(buf), 0);
+        flag = recv(m->st, buf, sizeof(buf), 0);
         if(flag == 0){
-            printf("the orther side is closed the connect!\n");
+            printf("对方已经关闭连接！\n");
             return NULL;
         }else if(flag == -1){
             printf("recv failed ! error message : %s\n", strerror(errno));
             return NULL;
         }
-        printf("from %s: %s", inet_ntoa(model->addr->sin_addr), buf);
-        memset(buf, 0, sizeof(buf));
-        
+        if(fwrite(buf, sizeof(char), flag, fp) < 0){
+            printf("recv fwrite fail ! error message : %s\n", strerror(errno));
+            return NULL;
+        }
+
+        printf("from %s, data: %s", inet_ntoa(m->addr->sin_addr), buf);
+        // memset(buf, 0, sizeof(buf));
     }
     return NULL;
 }
 
 int main(int argc, char const *argv[])
 {
-    int st = socket(AF_INET, SOCK_STREAM, 0);
+    int st = servInit();
+    while(1){
+        RecvModel model;
 
-    if(st == -1){
-        printf("open socket failed! error message:%s\n", strerror(errno));
-        return -1;
+        // accept the client(block)
+        struct sockaddr_in client_addr;
+        memset(&client_addr, 0, sizeof(client_addr));
+        
+        socklen_t client_addrLen = sizeof(client_addr);
+
+        int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
+
+        if(client_st == -1){
+            printf("accept failed ! error message :%s\n", strerror(errno));
+            goto END;
+        } 
+
+        model.st = client_st;
+        model.addr = &client_addr;
+        printf("accept by=%s\n", inet_ntoa(client_addr.sin_addr));
+
+        pthread_t thr_send, thr_recv;
+
+        if(pthread_create(&thr_recv, NULL, recv_thread, model.addr) != 0){
+            printf("create thread failed ! \n");
+            goto END;
+        }
+
+        if(pthread_create(&thr_send, NULL, send_thread, model.addr) != 0){
+            printf("create thread failed ! \n");
+            goto END;
+        }
+END: ;
+        // close(st);
     }
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
 
-    addr.sin_family = AF_INET;
-
-    addr.sin_addr.s_addr = inet_addr("192.168.1.199");
-
-    addr.sin_port = htons(8080);
-
-    // connect to server 
-    int numx = connect(st, (struct sockaddr *) &addr, sizeof(addr));
-
-    if(numx == -1){
-        printf("connect server failed ! error message :%s\n", strerror(errno));
-        goto END;
-    }
-
-    RecvModel model;
-
-    model.st = st;
-    model.addr = &addr;
-
-    pthread_t thr1, thr2;
-
-    if(pthread_create(&thr1, NULL, send_thread, &st) != 0){
-        printf("create send_thread failed\n");
-        goto END;
-    }
-
-    if(pthread_create(&thr2, NULL, recv_thread, &model) != 0){
-        printf("create recv_thread failed\n");
-        goto END;
-    }
-    pthread_join(thr1, NULL);
-    pthread_join(thr2, NULL);
-
-END: close(st);
     return 0;
 }
