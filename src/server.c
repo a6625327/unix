@@ -18,13 +18,22 @@ void *send_thread(void *arg){
     FILE *fp = (FILE *)m->data;
     char buf[BUFF_SIZE] = {0};
 
+    printf("send_thr file ptr: %p\n",fp);//ptr为指针
+
+
+    pthread_mutex_lock(&m_lock);
+    pthread_cond_wait(&c_lock, &m_lock);
+
     while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
         send_ret = send(st, buf, send_len, 0);
     }
+
+    pthread_mutex_unlock(&m_lock);
     if(send_ret == -1){
         printf("send error!\n");
     }
 
+    close(st);
     fclose(fp);
     return NULL;
 }
@@ -35,31 +44,55 @@ void *recv_thread(void *arg){
         return NULL;
     }
 
-    FILE *fp = tmpfile();
+    char fileName[] = "tmpFile_XXXXXX";
+
+    int fd;
+    if((fd = mkstemp(fileName))==-1)
+    {
+        printf("Creat temp file faile./n");
+        exit(1);
+    }
+
+    FILE *fp = fdopen(fd, "wb+");
+    printf("recv_thr file ptr: %p\n",fp);//ptr为指针
+
+    printf("fileName: %s\n", fileName);
 
     RecvModel *m = (RecvModel *)arg;
     m->data = (void *)fp;
 
     int flag = 0;
+    char operatorFlag = 0;
     char buf[BUFSIZ] = {0};
 
+    pthread_mutex_lock(&m_lock);
+    int writeCnt = 0;
     while(1){
         flag = recv(m->st, buf, sizeof(buf), 0);
         if(flag == 0){
             printf("对方已经关闭连接！\n");
-            return NULL;
+            operatorFlag = 1;
+            break;
         }else if(flag == -1){
             printf("recv failed ! error message : %s\n", strerror(errno));
-            return NULL;
+            operatorFlag = -1;
+            break;
         }
-        if(fwrite(buf, sizeof(char), flag, fp) < 0){
+        if((writeCnt = fwrite(buf, sizeof(char), flag, fp)) < 0){
             printf("recv fwrite fail ! error message : %s\n", strerror(errno));
-            return NULL;
+            operatorFlag = -1;
+            break;
         }
-
+        printf("writeCnt: %d. \n", writeCnt);
         printf("from %s, data: %s", inet_ntoa(m->addr->sin_addr), buf);
         // memset(buf, 0, sizeof(buf));
     }
+
+    if(operatorFlag == 1){
+        pthread_cond_signal(&c_lock); 
+    }
+
+    pthread_mutex_unlock(&m_lock);
     return NULL;
 }
 
@@ -88,12 +121,12 @@ int main(int argc, char const *argv[])
 
         pthread_t thr_send, thr_recv;
 
-        if(pthread_create(&thr_recv, NULL, recv_thread, model.addr) != 0){
+        if(pthread_create(&thr_recv, NULL, recv_thread, &model) != 0){
             printf("create thread failed ! \n");
             goto END;
         }
 
-        if(pthread_create(&thr_send, NULL, send_thread, model.addr) != 0){
+        if(pthread_create(&thr_send, NULL, send_thread, &model) != 0){
             printf("create thread failed ! \n");
             goto END;
         }
