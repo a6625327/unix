@@ -21,6 +21,12 @@ void *send_thread(void *arg){
     FILE *fp = (FILE *)m->data;
     char buf[BUFF_SIZE] = {0};
 
+    printf("send_thr file ptr: %p\n",fp);//ptr为指针
+
+
+    pthread_mutex_lock(&m_lock);
+    pthread_cond_wait(&c_lock, &m_lock);
+
     while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
         send_ret = send(st, buf, send_len, 0);
     }
