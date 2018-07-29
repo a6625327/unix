@@ -1,27 +1,58 @@
 #include "../include/client.h"
 
+// 接受线程完成后通知发送线程用的互斥量
+pthread_mutex_t m_lock; 
+pthread_cond_t c_lock;  
+
+int clientInit(int *ct){
+    *ct = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in s_addr;
+
+    s_addr.sin_family = AF_INET;
+    s_addr.sin_port = htons(8080);
+    inet_pton(AF_INET, "192.168.199.109", &s_addr.sin_addr.s_addr);
+
+    int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
+    return ret;
+};
+
 void *send_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
+    }
+    int ct;
+    int ret = clientInit(&ct);
+    if(ret < 0){
+        perror("clietn init fail");
+        exit(-1);
     }
 
     RecvModel *m = (RecvModel *)arg;
     int send_len = 0;
     int send_ret = 1;
 
-    int st = m->st;
     FILE *fp = (FILE *)m->data;
     char buf[BUFF_SIZE] = {0};
 
+    pthread_mutex_lock(&m_lock);
+
     while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
-        send_ret = send(st, buf, send_len, 0);
+        send_ret = send(ct, buf, send_len, 0);
     }
+
     if(send_ret == -1){
         printf("send error!\n");
     }
 
+    pthread_cond_signal(&c_lock);
+    pthread_mutex_unlock(&m_lock);
+
+    close(ct);
     fclose(fp);
+
+    printf("cli send conplete!\n");
     return NULL;
 }
 
@@ -31,71 +62,91 @@ void *recv_thread(void *arg){
         return NULL;
     }
 
-    FILE *fp = tmpfile();
+    int st = servInit();
 
-    RecvModel *m = (RecvModel *)arg;
-    m->data = (void *)fp;
+    // accept the client(block)
+    struct sockaddr_in client_addr;
+    memset(&client_addr, 0, sizeof(client_addr));
+    
+    socklen_t client_addrLen = sizeof(client_addr);
+
+    int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
+
+    if(client_st == -1){
+        printf("accept failed ! error message :%s\n", strerror(errno));
+        exit(-1);
+    } 
+    
+    printf("client accept by=%s\n", inet_ntoa(client_addr.sin_addr));
 
     int flag = 0;
+    char operatorFlag = 0;
     char buf[BUFSIZ] = {0};
+    char out[BUFF_SIZE] = {0};
+
+    pthread_mutex_lock(&m_lock);
+    pthread_cond_wait(&c_lock, &m_lock);
 
     while(1){
-        flag = recv(m->st, buf, sizeof(buf), 0);
+        flag = recv(client_st, buf, sizeof(buf), 0);
         if(flag == 0){
             printf("对方已经关闭连接！\n");
-            return NULL;
+            operatorFlag = 1;
+            break;
         }else if(flag == -1){
             printf("recv failed ! error message : %s\n", strerror(errno));
-            return NULL;
-        }
-        if(fwrite(buf, sizeof(char), flag, fp) < 0){
-            printf("recv fwrite fail ! error message : %s\n", strerror(errno));
-            return NULL;
+            operatorFlag = -1;
+            break;
         }
 
-        printf("from %s, data: %s", inet_ntoa(m->addr->sin_addr), buf);
+        snprintf(out, flag, "%s", buf);
+        printf("%s", out);
+        memset(out, 0, flag);
+
+        // printf("from %s, data: %s", inet_ntoa(m->addr->sin_addr), buf);
         // memset(buf, 0, sizeof(buf));
+    }
+    
+    pthread_mutex_unlock(&m_lock);
+
+    close(st);
+    
+    if(operatorFlag == -1){
+        perror("client recv fail");
     }
     return NULL;
 }
 
 int main(int argc, char const *argv[])
 {
-    int st = servInit();
-    while(1){
-        RecvModel model;
+    RecvModel model;
 
-        // accept the client(block)
-        struct sockaddr_in client_addr;
-        memset(&client_addr, 0, sizeof(client_addr));
-        
-        socklen_t client_addrLen = sizeof(client_addr);
-
-        int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
-
-        if(client_st == -1){
-            printf("accept failed ! error message :%s\n", strerror(errno));
-            goto END;
-        } 
-
-        model.st = client_st;
-        model.addr = &client_addr;
-        printf("accept by=%s\n", inet_ntoa(client_addr.sin_addr));
-
-        pthread_t thr_send, thr_recv;
-
-        if(pthread_create(&thr_recv, NULL, recv_thread, model.addr) != 0){
-            printf("create thread failed ! \n");
-            goto END;
-        }
-
-        if(pthread_create(&thr_send, NULL, send_thread, model.addr) != 0){
-            printf("create thread failed ! \n");
-            goto END;
-        }
-END: ;
-        // close(st);
+    FILE *fp = fopen("../test.xml", "rb");
+    if(fp == NULL){
+        perror("open file error");
+        exit(-1);
     }
+    model.data = (void *)fp;
+
+
+
+    pthread_t thr_send, thr_recv;
+
+    if(pthread_create(&thr_recv, NULL, recv_thread, model.addr) != 0){
+        printf("create thread failed ! \n");
+        goto END;
+    }
+
+    if(pthread_create(&thr_send, NULL, send_thread, &model) != 0){
+        printf("create thread failed ! \n");
+        goto END;
+    }
+
+    pthread_join(thr_recv, NULL);
+    pthread_join(thr_send, NULL);
+
+END: ;
+    // close(st);
 
     return 0;
 }
