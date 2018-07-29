@@ -1,8 +1,21 @@
 #include "../include/server.h"
 
 // 接受线程完成后通知发送线程用的互斥量
-pthread_mutex_t m_lock; 
-pthread_cond_t c_lock;  
+pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
+pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
+
+int clientInit(int *ct){
+    *ct = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in s_addr;
+
+    s_addr.sin_family = AF_INET;
+    s_addr.sin_port = htons(8082);
+    inet_pton(AF_INET, "192.168.199.109", &s_addr.sin_addr.s_addr);
+
+    int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
+    return ret;
+};
 
 void *send_thread(void *arg){
     if(arg == NULL){
@@ -17,15 +30,15 @@ void *send_thread(void *arg){
     pthread_mutex_lock(&m_lock);
     pthread_cond_wait(&c_lock, &m_lock);
 
-    int st = m->st;
+    int st;
+    int ret = clientInit(&st);
+    if(ret < 0){
+        perror("clietn init fail");
+        exit(-1);
+    }
+
     FILE *fp = (FILE *)m->data;
     char buf[BUFF_SIZE] = {0};
-
-    printf("send_thr file ptr: %p\n",fp);//ptr为指针
-
-
-    pthread_mutex_lock(&m_lock);
-    pthread_cond_wait(&c_lock, &m_lock);
 
     while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
         send_ret = send(st, buf, send_len, 0);

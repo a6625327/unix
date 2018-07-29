@@ -1,8 +1,8 @@
 #include "../include/client.h"
 
 // 接受线程完成后通知发送线程用的互斥量
-pthread_mutex_t m_lock; 
-pthread_cond_t c_lock;  
+pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
+pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
 
 int clientInit(int *ct){
     *ct = socket(AF_INET, SOCK_STREAM, 0);
