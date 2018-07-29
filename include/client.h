@@ -14,8 +14,6 @@
 
 #include "common.h"
 
-const unsigned int SERV_PORT = 8000;
-
 int servInit(){
     int st = socket(AF_INET, SOCK_STREAM, 0);
     if(st == -1){
@@ -37,7 +35,7 @@ int servInit(){
     addr.sin_family = AF_INET;
 
     // set port
-    addr.sin_port = htons(8081);
+    addr.sin_port = htons(8082);
 
     // set listen to any address
     addr.sin_addr.s_addr = htonl(INADDR_ANY);

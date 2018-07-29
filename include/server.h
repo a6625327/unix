@@ -42,13 +42,14 @@ int servInit(){
     // set listen to any address
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if(bind(st, (struct sockaddr *) &addr, sizeof(addr)) == -1){
+    int bindRet;
+    if((bindRet = bind(st, (struct sockaddr *) &addr, sizeof(addr))) == -1){
         printf("bind ip failed ! error message :%s\n", strerror(errno));
         goto END;
     }
 
-
-    if(listen(st, 3) == -1){
+    int listenRet;
+    if((listenRet = listen(st, 3)) == -1){
         printf("listen failed ! error message :%s\n", strerror(errno));
         goto END;
     }
