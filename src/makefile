@@ -18,3 +18,5 @@ clean:
 	rm -f $(OBJS2)
 	rm -f $(EXEC1)
 	rm -f $(EXEC2)
+	rm -f core
+	rm -f tmpFile*

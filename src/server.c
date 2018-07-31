@@ -5,13 +5,17 @@ pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
 
 int clientInit(int *ct){
+    printf("serv clientInit(int *ct) in\n");
+
     *ct = socket(AF_INET, SOCK_STREAM, 0);
+
+    printf("serv clientInit() ct(%d)\n", *ct);
 
     struct sockaddr_in s_addr;
 
     s_addr.sin_family = AF_INET;
-    s_addr.sin_port = htons(8082);
-    inet_pton(AF_INET, "192.168.199.109", &s_addr.sin_addr.s_addr);
+    s_addr.sin_port = htons(8083);
+    inet_pton(AF_INET, "192.168.1.199", &s_addr.sin_addr.s_addr);
 
     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
     return ret;
@@ -27,15 +31,20 @@ void *send_thread(void *arg){
     int send_len = 0;
     int send_ret = 1;
 
+    printf("serv send_thread() in\n");
     pthread_mutex_lock(&m_lock);
     pthread_cond_wait(&c_lock, &m_lock);
-
+    
+    printf("serv send_thread() get lock\n");
     int st;
+    printf("serv send_thread() staring clientInit(%d)\n", st);
     int ret = clientInit(&st);
     if(ret < 0){
         perror("clietn init fail");
         exit(-1);
     }
+
+    printf("serv send_thread()  clientInit() success!\n");
 
     FILE *fp = (FILE *)m->data;
     char buf[BUFF_SIZE] = {0};
@@ -44,6 +53,8 @@ void *send_thread(void *arg){
         send_ret = send(st, buf, send_len, 0);
     }
 
+    printf("serv send_thread()  send() success!\n");
+
     pthread_mutex_unlock(&m_lock);
     if(send_ret == -1){
         printf("send error!\n");
@@ -51,13 +62,14 @@ void *send_thread(void *arg){
 
     close(st);
     fclose(fp);
+    printf("now exit the send_thr\n");
     return NULL;
 }
 
 void *recv_thread(void *arg){
 
     if(arg == NULL){
-        printf("param is not allow NULL!\n");
+        printf("param is not allow NULL!\n");   
         return NULL;
     }
 
@@ -104,12 +116,15 @@ void *recv_thread(void *arg){
         // memset(buf, 0, sizeof(buf));
     }
 
+    printf("recv operatorFlag： %d\n", operatorFlag);
+
+    pthread_mutex_unlock(&m_lock);
+
     if(operatorFlag == 1){
         printf("recv complete, send signal to send_thr\n");
         pthread_cond_signal(&c_lock); 
     }
 
-    pthread_mutex_unlock(&m_lock);
     printf("recv complete, now exit the recv_thr\n");
     return NULL;
 }
@@ -148,7 +163,8 @@ int main(int argc, char const *argv[])
             printf("create thread failed ! \n");
             goto END;
         }
-END: ;
+END: ;// 
+
         // close(st);
     }
 

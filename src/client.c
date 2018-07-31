@@ -11,7 +11,7 @@ int clientInit(int *ct){
 
     s_addr.sin_family = AF_INET;
     s_addr.sin_port = htons(8080);
-    inet_pton(AF_INET, "192.168.199.109", &s_addr.sin_addr.s_addr);
+    inet_pton(AF_INET, "192.168.1.199", &s_addr.sin_addr.s_addr);
 
     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
     return ret;
@@ -70,6 +70,7 @@ void *recv_thread(void *arg){
     
     socklen_t client_addrLen = sizeof(client_addr);
 
+    printf("cli starting to accept!\n");
     int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
 
     if(client_st == -1){

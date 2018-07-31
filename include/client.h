@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "common.h"
 
@@ -35,10 +36,10 @@ int servInit(){
     addr.sin_family = AF_INET;
 
     // set port
-    addr.sin_port = htons(8082);
+    addr.sin_port = htons(8083);
 
     // set listen to any address
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr.s_addr);
 
     if(bind(st, (struct sockaddr *) &addr, sizeof(addr)) == -1){
         printf("bind ip failed ! error message :%s\n", strerror(errno));

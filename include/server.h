@@ -40,7 +40,8 @@ int servInit(){
     addr.sin_port = htons(8080);
 
     // set listen to any address
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr.s_addr);
+
 
     int bindRet;
     if((bindRet = bind(st, (struct sockaddr *) &addr, sizeof(addr))) == -1){
@@ -55,6 +56,7 @@ int servInit(){
     }
 
 END: 
+    printf("serv seevInit() complete\n");
     return st;
 }
 
