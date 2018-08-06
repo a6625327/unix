@@ -4,24 +4,7 @@
 pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
 pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
 
-int clientInit(int *ct){
-    printf("serv clientInit(int *ct) in\n");
-
-    *ct = socket(AF_INET, SOCK_STREAM, 0);
-
-    printf("serv clientInit() ct(%d)\n", *ct);
-
-    struct sockaddr_in s_addr;
-
-    s_addr.sin_family = AF_INET;
-    s_addr.sin_port = htons(8083);
-    inet_pton(AF_INET, "192.168.1.199", &s_addr.sin_addr.s_addr);
-
-    int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
-    return ret;
-};
-
-void *send_thread(void *arg){
+void *serv_send_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
@@ -31,20 +14,20 @@ void *send_thread(void *arg){
     int send_len = 0;
     int send_ret = 1;
 
-    printf("serv send_thread() in\n");
+    printf("serv serv_send_thread() in\n");
     pthread_mutex_lock(&m_lock);
     pthread_cond_wait(&c_lock, &m_lock);
     
-    printf("serv send_thread() get lock\n");
+    printf("serv serv_send_thread() get lock\n");
     int st;
-    printf("serv send_thread() staring clientInit(%d)\n", st);
-    int ret = clientInit(&st);
+    printf("serv serv_send_thread() staring clientInit(%d)\n", st);
+    int ret = clientInit(&st, "192.168.1.199", 8080);
     if(ret < 0){
         perror("clietn init fail");
         exit(-1);
     }
 
-    printf("serv send_thread()  clientInit() success!\n");
+    printf("serv serv_send_thread()  clientInit() success!\n");
 
     FILE *fp = (FILE *)m->data;
     char buf[BUFF_SIZE] = {0};
@@ -53,7 +36,7 @@ void *send_thread(void *arg){
         send_ret = send(st, buf, send_len, 0);
     }
 
-    printf("serv send_thread()  send() success!\n");
+    printf("serv serv_send_thread()  send() success!\n");
 
     pthread_mutex_unlock(&m_lock);
     if(send_ret == -1){
@@ -66,7 +49,7 @@ void *send_thread(void *arg){
     return NULL;
 }
 
-void *recv_thread(void *arg){
+void *recv_send_thread(void *arg){
 
     if(arg == NULL){
         printf("param is not allow NULL!\n");   
@@ -131,7 +114,7 @@ void *recv_thread(void *arg){
 
 int main(int argc, char const *argv[])
 {
-    int st = servInit();
+    int st = servInit("0.0.0.0", 8081);
     while(1){
         RecvModel model;
 
@@ -154,12 +137,12 @@ int main(int argc, char const *argv[])
 
         pthread_t thr_send, thr_recv;
 
-        if(pthread_create(&thr_recv, NULL, recv_thread, &model) != 0){
+        if(pthread_create(&thr_recv, NULL, recv_send_thread, &model) != 0){
             printf("create thread failed ! \n");
             goto END;
         }
 
-        if(pthread_create(&thr_send, NULL, send_thread, &model) != 0){
+        if(pthread_create(&thr_send, NULL, serv_send_thread, &model) != 0){
             printf("create thread failed ! \n");
             goto END;
         }

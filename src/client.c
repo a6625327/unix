@@ -4,32 +4,21 @@
 pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
 pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
 
-int clientInit(int *ct){
-    *ct = socket(AF_INET, SOCK_STREAM, 0);
 
-    struct sockaddr_in s_addr;
-
-    s_addr.sin_family = AF_INET;
-    s_addr.sin_port = htons(8080);
-    inet_pton(AF_INET, "192.168.1.199", &s_addr.sin_addr.s_addr);
-
-    int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
-    return ret;
-};
-
-void *send_thread(void *arg){
+void *client_send_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
     }
     int ct;
-    int ret = clientInit(&ct);
+    int ret = clientInit(&ct, "192.168.1.199", 8081);
     if(ret < 0){
         perror("clietn init fail");
         exit(-1);
     }
 
     RecvModel *m = (RecvModel *)arg;
+    
     int send_len = 0;
     int send_ret = 1;
 
@@ -56,13 +45,13 @@ void *send_thread(void *arg){
     return NULL;
 }
 
-void *recv_thread(void *arg){
+void *client_recv_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
     }
 
-    int st = servInit();
+    int st = servInit("0.0.0.0", 8080);
 
     // accept the client(block)
     struct sockaddr_in client_addr;
@@ -103,9 +92,6 @@ void *recv_thread(void *arg){
         snprintf(out, flag, "%s", buf);
         printf("%s", out);
         memset(out, 0, flag);
-
-        // printf("from %s, data: %s", inet_ntoa(m->addr->sin_addr), buf);
-        // memset(buf, 0, sizeof(buf));
     }
     
     pthread_mutex_unlock(&m_lock);
@@ -129,16 +115,14 @@ int main(int argc, char const *argv[])
     }
     model.data = (void *)fp;
 
-
-
     pthread_t thr_send, thr_recv;
 
-    if(pthread_create(&thr_recv, NULL, recv_thread, model.addr) != 0){
+    if(pthread_create(&thr_recv, NULL, client_recv_thread, model.addr) != 0){
         printf("create thread failed ! \n");
         goto END;
     }
 
-    if(pthread_create(&thr_send, NULL, send_thread, &model) != 0){
+    if(pthread_create(&thr_send, NULL, client_send_thread, &model) != 0){
         printf("create thread failed ! \n");
         goto END;
     }
