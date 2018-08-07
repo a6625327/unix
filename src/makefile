@@ -1,6 +1,6 @@
 .SUFFIXES:.c .o
 CC=gcc
-SRCS1=server.c
+SRCS1=server.c rw.c lockMgr.c
 SRCS2=client.c
 OBJS1=$(SRCS1:.c=.o)
 OBJS2=$(SRCS2:.c=.o)

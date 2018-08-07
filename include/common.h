@@ -15,12 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-typedef struct _recvmodel{
-    int st;
-    char status;
-    struct sockaddr_in *addr;
-    void *data;
-} RecvModel;
+#include "structUtil.h"
 
 #define BUFF_SIZE 2048
 

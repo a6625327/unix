@@ -1,9 +1,5 @@
 #include "../include/server.h"
 
-// 接受线程完成后通知发送线程用的互斥量
-pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
-pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
-
 void *serv_send_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
@@ -15,16 +11,19 @@ void *serv_send_thread(void *arg){
     int send_ret = 1;
 
     printf("serv serv_send_thread() in\n");
-    pthread_mutex_lock(&m_lock);
-    pthread_cond_wait(&c_lock, &m_lock);
+
+    // get lock and wait lock
+    pthread_mutex_lock(&m->lock->m_lock);
+    pthread_cond_wait(&m->lock->c_lock, &m->lock->m_lock);
     
     printf("serv serv_send_thread() get lock\n");
+
     int st;
     printf("serv serv_send_thread() staring clientInit(%d)\n", st);
     int ret = clientInit(&st, "192.168.1.199", 8080);
     if(ret < 0){
         perror("clietn init fail");
-        exit(-1);
+        return NULL;
     }
 
     printf("serv serv_send_thread()  clientInit() success!\n");
@@ -38,18 +37,21 @@ void *serv_send_thread(void *arg){
 
     printf("serv serv_send_thread()  send() success!\n");
 
-    pthread_mutex_unlock(&m_lock);
+    pthread_mutex_unlock(&m->lock->m_lock);
     if(send_ret == -1){
         printf("send error!\n");
     }
 
     close(st);
     fclose(fp);
+
+    unset_lock_used_flag(*m->lock);
+
     printf("now exit the send_thr\n");
     return NULL;
 }
 
-void *recv_send_thread(void *arg){
+void *serv_recv_thread(void *arg){
 
     if(arg == NULL){
         printf("param is not allow NULL!\n");   
@@ -62,7 +64,7 @@ void *recv_send_thread(void *arg){
     if((fd = mkstemp(fileName))==-1)
     {
         printf("Creat temp file faile./n");
-        exit(1);
+        return NULL;
     }
 
     FILE *fp = fdopen(fd, "wb+");
@@ -72,40 +74,18 @@ void *recv_send_thread(void *arg){
     RecvModel *m = (RecvModel *)arg;
     m->data = (void *)fp;
 
-    int flag = 0;
     char operatorFlag = 0;
-    char buf[BUFSIZ] = {0};
 
-    pthread_mutex_lock(&m_lock);
-    int writeCnt = 0;
-    while(1){
-        flag = recv(m->st, buf, sizeof(buf), 0);
-        if(flag == 0){
-            printf("对方已经关闭连接！\n");
-            operatorFlag = 1;
-            break;
-        }else if(flag == -1){
-            printf("recv failed ! error message : %s\n", strerror(errno));
-            operatorFlag = -1;
-            break;
-        }
-        if((writeCnt = fwrite(buf, sizeof(char), flag, fp)) < 0){
-            printf("recv fwrite fail ! error message : %s\n", strerror(errno));
-            operatorFlag = -1;
-            break;
-        }
-        printf("writeCnt: %d. \n", writeCnt);
-        printf("from %s, data: %s", inet_ntoa(m->addr->sin_addr), buf);
-        // memset(buf, 0, sizeof(buf));
-    }
+    pthread_mutex_lock(&m->lock->m_lock);
 
-    printf("recv operatorFlag： %d\n", operatorFlag);
+    // confilct opera
+    operatorFlag = recv_write_to_tmpFile(m->st, fp, m->addr->sin_addr);
 
-    pthread_mutex_unlock(&m_lock);
+    pthread_mutex_unlock(&m->lock->m_lock);
 
     if(operatorFlag == 1){
         printf("recv complete, send signal to send_thr\n");
-        pthread_cond_signal(&c_lock); 
+        pthread_cond_signal(&m->lock->c_lock); 
     }
 
     printf("recv complete, now exit the recv_thr\n");
@@ -133,23 +113,27 @@ int main(int argc, char const *argv[])
 
         model.st = client_st;
         model.addr = &client_addr;
-        printf("accept by=%s\n", inet_ntoa(client_addr.sin_addr));
+        printf("accept ip=%s\n", inet_ntoa(client_addr.sin_addr));
 
         pthread_t thr_send, thr_recv;
 
-        if(pthread_create(&thr_recv, NULL, recv_send_thread, &model) != 0){
-            printf("create thread failed ! \n");
-            goto END;
-        }
+        model.lock = test_lock();
 
-        if(pthread_create(&thr_send, NULL, serv_send_thread, &model) != 0){
-            printf("create thread failed ! \n");
-            goto END;
-        }
-END: ;// 
+        if(model.lock == NULL){
+            continue;
+        }else{
+            if(pthread_create(&thr_recv, NULL, serv_recv_thread, &model) != 0){
+                printf("create thread failed ! \n");
+                goto END;
+            }
 
-        // close(st);
+            if(pthread_create(&thr_send, NULL, serv_send_thread, &model) != 0){
+                printf("create thread failed ! \n");
+                goto END;
+            }
+        }
+        
+END: ; 
     }
-
     return 0;
 }

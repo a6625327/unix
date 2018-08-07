@@ -1,13 +1,12 @@
 #include "../include/client.h"
 
-// 接受线程完成后通知发送线程用的互斥量
 pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
 pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  
 
 
 void *client_send_thread(void *arg){
     if(arg == NULL){
-        printf("param is not allow NULL!\n");
+        printf("client_send_thread() param is not allow NULL!\n");
         return NULL;
     }
     int ct;
@@ -47,7 +46,7 @@ void *client_send_thread(void *arg){
 
 void *client_recv_thread(void *arg){
     if(arg == NULL){
-        printf("param is not allow NULL!\n");
+        printf("client_recv_thread() param is not allow NULL!\n");
         return NULL;
     }
 
@@ -107,12 +106,15 @@ void *client_recv_thread(void *arg){
 int main(int argc, char const *argv[])
 {
     RecvModel model;
-
+    
     FILE *fp = fopen("../test.xml", "rb");
     if(fp == NULL){
         perror("open file error");
         exit(-1);
     }
+
+    printf("the file is open, the ptr: %p\n", fp);
+
     model.data = (void *)fp;
 
     pthread_t thr_send, thr_recv;
