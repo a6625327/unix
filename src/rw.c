@@ -23,8 +23,8 @@ char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr){
             operatorFlag = -1;
             break;
         }
-        printf("writeCnt: %d. \n", writeCnt);
-        printf("from %s, data: %s", inet_ntoa(sin_addr), buf);
+        // printf("writeCnt: %d. \n", writeCnt);
+        // printf("from %s, data: %s", inet_ntoa(sin_addr), buf);
         // memset(buf, 0, sizeof(buf));
     }
 
