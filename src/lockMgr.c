@@ -25,9 +25,9 @@ struct thread_lock* test_lock(){
 
         if(t_lock[cnt].use_flag == 0){
             printf("the cnt: %d is free\n", cnt);
-            if(cnt == 1){
-                sleep(10);
-            }
+            // if(cnt == 1){
+            //     sleep(10);
+            // }
 
             set_lock_used_flag(&t_lock[cnt]);
             

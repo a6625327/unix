@@ -46,7 +46,13 @@ void *serv_send_thread(void *arg){
 
     close(st);
     printf("@@@@@@free the file ptr = %p@@@@@@\n", fp);
+    printf("^^^^^^free the model struct^^^^^^\n");
     fclose(fp);
+
+    printf("#####unlink the file#####\n");
+    unlink(m->fileName);
+    
+    free(m);
 
     unset_lock_used_flag(m->lock);
 
@@ -75,6 +81,8 @@ void *serv_recv_thread(void *arg){
     printf("fileName: %s\n", fileName);
 
     RecvModel *m = (RecvModel *)arg;
+
+    m->fileName = fileName;   
     m->data = (void *)fp;
 
     char operatorFlag = 0;

@@ -11,6 +11,7 @@ struct thread_lock{
 typedef struct _recvmodel{
     int st;
     char status;
+    char *fileName;
     struct sockaddr_in *addr;
     struct thread_lock *lock;
     void *data;
