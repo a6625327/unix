@@ -18,12 +18,12 @@ void *serv_send_thread(void *arg){
     printf("serv serv_send_thread() get lock\n");
 
     int st;
-    printf("serv serv_send_thread() staring clientInit(%d)\n", st);
     int ret = clientInit(&st, "192.168.1.199", 8080);
+    printf("serv serv_send_thread() staring clientInit(%d)\n", st);
     if(ret < 0){
         perror("clietn init fail");
         pthread_mutex_unlock(&m->lock->m_lock);
-        return NULL;
+        goto FREE_RESOURCES;
     }
 
     printf("serv serv_send_thread()  clientInit() success!\n");
@@ -39,15 +39,18 @@ void *serv_send_thread(void *arg){
 
     printf("serv serv_send_thread()  send() success!\n");
 
-    pthread_mutex_unlock(&m->lock->m_lock);
     if(send_ret == -1){
         printf("send error!\n");
     }
 
+FREE_RESOURCES:
+    pthread_mutex_unlock(&m->lock->m_lock);
     close(st);
     printf("@@@@@@free the file ptr = %p@@@@@@\n", fp);
     printf("^^^^^^free the model struct^^^^^^\n");
-    fclose(fp);
+    if(fp){
+        fclose(fp);
+    }
 
     printf("#####unlink the file#####\n");
     unlink(m->fileName);
@@ -95,11 +98,12 @@ void *serv_recv_thread(void *arg){
     pthread_mutex_unlock(&m->lock->m_lock);
 
     if(operatorFlag == 1){
-        printf("recv complete, send signal to send_thr\n");
+        printf("recv complete, send signal to send_thr IN\n");
         pthread_cond_signal(&m->lock->c_lock); 
     }
 
-    printf("recv complete, now exit the recv_thr\n");
+    printf("recv complete, now exit the recv_thr OUT\n");
+    close(m->st);
     return NULL;
 }
 
@@ -119,6 +123,7 @@ int main(int argc, char const *argv[])
 
         if(client_st == -1){
             printf("accept failed ! error message :%s\n", strerror(errno));
+            exit(1);
             goto END;
         } 
 
@@ -131,6 +136,9 @@ int main(int argc, char const *argv[])
         model->lock = test_lock();
 
         if(model->lock == NULL){
+            unset_lock_used_flag(model->lock);
+            close(client_st);
+
             continue;
         }else{
             if(pthread_create(&thr_recv, NULL, serv_recv_thread, model) != 0){

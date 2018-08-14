@@ -1,38 +1,12 @@
 /*
 *********************************************************************************************************
-*
-*
 *                                       RingQueueStruct
 *                                         环形队列结构
-*
-* File : RingQueue.h
-* By   : Lin Shijun(http://blog.csdn.net/lin_strong)
-* Date : 2018/02/23
-* version: V1.2
-* NOTE(s): 这段程序用来对一个给定的缓冲区进行模拟环形队列的管理
-*                   程序本身不会自动分配缓冲区空间,用户需要自己负责分配空间,并且要保证不直接访问缓存区
-*                   // 在某处分配内存空间
-*                   RQTYPE buffer[BUFFER_SIZE];
-*                   RING_QUEUE que,*ptr_que;
-*                   unsigned char err;
-*                   // 初始化
-*                   ptr_que = RingQueueInit(&que,buffer,BUFFER_SIZE,&err);
-*                   if(err == RQ_ERR_NONE  ){
-*                     // 初始化成功,使用其他函数
-*                   }
-* History : 2017/04/25   the original version of RingQueueStruct.
-*           2017/10/16   put functions used frequently,RingQueueIn and RingQueueOut, in non-banked address;
-*                        modify single line function RingQueueIsEmpty and RingQueueIsFull to marco function;
-*                        to get better efficiency.
-*           2018/02/23   1.add the marco(RQ_ARGUMENT_CHECK_EN) to controll argument check so user can save 
-*                          more code.
-*                        2.add the ADDRESSING MODE so the buffer can be defined in banked addressing area.
 *********************************************************************************************************
 */
 
-
-#ifndef   RING_QUEUE_H
-#define   RING_QUEUE_H
+#ifndef   ring_queue_H
+#define   ring_queue_H
 
 /*
 ********************************************************************************************
@@ -60,11 +34,11 @@
 // 如果你不知道这是什么意思的话，那就用扩展寻址就行了，这是默认的方式
 
 // extended addressing mode 扩展区寻址(默认)
-#define RQ_ADDRESSING_MODE
+#define ring_queue_ptr
 // banked RAM addressing mode   RAM分页区寻址
-//#define RQ_ADDRESSING_MODE __rptr
+//#define ring_queue_ptr __rptr
 // global addressing mode   全局寻址
-//#define RQ_ADDRESSING_MODE __far
+//#define ring_queue_ptr __far
 
 /*
 *********************************************************************************************************
@@ -97,16 +71,17 @@
 */
 
 // define the data type that stores in the RingQueue.       定义存在环形缓冲区内的数据的类型
-typedef unsigned char RQTYPE;
-typedef RQTYPE *RQ_ADDRESSING_MODE pRQTYPE;
+typedef void* ring_queue_t;
+
+typedef ring_queue_t *ring_queue_ptr ptr_ring_queue_t;
 typedef struct {
-    unsigned short  RingBufCtr;              /* Number of characters in the ring buffer */
-    unsigned short  RingBufSize;             /* Ring buffer Size */    
-    pRQTYPE RingBufInPtr;                    /* Pointer to where next character will be inserted        */  
-    pRQTYPE RingBufOutPtr;                   /* Pointer from where next character will be extracted     */  
-    pRQTYPE RingBuf;                         /* Ring buffer array */  
-    pRQTYPE RingBufEnd;                      /* Point to the end of the buffer */
-} RING_QUEUE;
+    unsigned short  ring_buf_of_cnt;                /* Number of characters in the ring buffer currently */
+    unsigned short  ring_buf_size;                  /* Ring buffer Size (per buffer) */    
+    ptr_ring_queue_t ring_buf_in_ptr;               /* Pointer to where next character will be inserted */  
+    ptr_ring_queue_t ring_buf_out_ptr;              /* Pointer from where next character will be extracted */  
+    ptr_ring_queue_t ring_buf;                      /* Ring buffer array */  
+    ptr_ring_queue_t ring_buf_end;                  /* Point to the end of the buffer */
+} ring_queue;
 
 /*
 *********************************************************************************************************
@@ -114,13 +89,11 @@ typedef struct {
 *********************************************************************************************************
 */
 
-RING_QUEUE *RingQueueInit(RING_QUEUE *pQueue,pRQTYPE pbuf,unsigned short bufSize,unsigned char *perr);
-#pragma CODE_SEG __NEAR_SEG NON_BANKED
-unsigned short RingQueueIn(RING_QUEUE *pQueue,RQTYPE data,unsigned char option,unsigned char *perr);
-RQTYPE RingQueueOut(RING_QUEUE *pQueue,unsigned char *perr);
-#pragma CODE_SEG DEFAULT
-short RingQueueMatch(RING_QUEUE *pQueue,pRQTYPE pbuf,unsigned short len);
-void RingQueueClear(RING_QUEUE *pQueue);
+ring_queue *RingQueueInit(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short bufSize, unsigned char *perr);
+unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr);
+ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr);
+short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short len);
+void RingQueueClear(ring_queue *ptr_queue);
 
 /*
 *********************************************************************************************************
@@ -128,7 +101,7 @@ void RingQueueClear(RING_QUEUE *pQueue);
 *
 * Description :  whether the RingQueue is empty.   环形队列是否为空
 *
-* Arguments   :  pQueue  pointer to the ring queue control block;     指向环形队列控制块的指针
+* Arguments   :  ptr_queue  pointer to the ring queue control block;     指向环形队列控制块的指针
 *
 * Return      :  TRUE    the RingQueue is empty.
 *                FALSE   the RingQueue is not empty.
@@ -136,7 +109,7 @@ void RingQueueClear(RING_QUEUE *pQueue);
 *********************************************************************************************************
 */
 
-#define RingQueueIsEmpty(pQueue) ((pQueue)->RingBufCtr == 0)
+#define RingQueueIsEmpty(ptr_queue) ((ptr_queue)->ring_buf_of_cnt == 0)
 
 /*
 *********************************************************************************************************
@@ -144,7 +117,7 @@ void RingQueueClear(RING_QUEUE *pQueue);
 *
 * Description : whether the RingQueue is full.    环形队列是否为空
 *
-* Arguments   : pQueue  pointer to the ring queue control block;   指向环形队列控制块的指针
+* Arguments   : ptr_queue  pointer to the ring queue control block;   指向环形队列控制块的指针
 *
 * Return      : TRUE    the RingQueue is full.
 *               FALSE   the RingQueue is not full.
@@ -152,6 +125,6 @@ void RingQueueClear(RING_QUEUE *pQueue);
 *********************************************************************************************************
 */
 
-#define RingQueueIsFull(pQueue)  ((pQueue)->RingBufCtr >= (pQueue)->RingBufSize)
+#define RingQueueIsFull(ptr_queue)  ((ptr_queue)->ring_buf_of_cnt >= (ptr_queue)->ring_buf_size)
 
 #endif
