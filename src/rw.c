@@ -23,12 +23,29 @@ char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr){
             operatorFlag = -1;
             break;
         }
-        // printf("writeCnt: %d. \n", writeCnt);
-        // printf("from %s, data: %s", inet_ntoa(sin_addr), buf);
-        // memset(buf, 0, sizeof(buf));
     }
 
     printf("recv operatorFlag： %d\n", operatorFlag);
 
     return operatorFlag;
+}
+
+
+char serv_write_to_socket(int st, FILE *fp){
+    int send_len = 0;
+    int send_ret = 1;
+
+    char buf[BUFF_SIZE] = {0};
+    
+    while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
+        send_ret = send(st, buf, send_len, 0);
+    }
+
+    printf("serv serv_send_thread()  send() success!\n");
+
+    if(send_ret == -1){
+        printf("send error!\n");
+    }
+
+    return send_ret;
 }

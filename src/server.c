@@ -1,15 +1,40 @@
 #include "../include/server.h"
 
+void send_cb(void *recv_mode, void *arg){
+    // do sth
+    RecvModel *m = (RecvModel *)recv_mode;
+
+    int st;
+    int ret = clientInit(&st, "192.168.1.199", 8080);
+
+    FILE *fp = (FILE *)m->data;
+
+    printf("serv serv_send_thread() staring clientInit(%d)\n", st);
+    if(ret < 0){
+        return;
+    }
+
+    printf("serv serv_send_thread()  clientInit() success!\n");
+
+    serv_write_to_socket(st, fp);
+
+    close(st);
+}
+
+void recv_cb(void *recv_mode, void *arg){
+    // do sth
+    
+}
+
 void *serv_send_thread(void *arg){
     if(arg == NULL){
         printf("param is not allow NULL!\n");
         return NULL;
     }
-
     
     RecvModel *m = (RecvModel *)arg;
-    int send_len = 0;
-    int send_ret = 1;
+    
+    FILE *fp = (FILE *)m->data;
 
     // get lock and wait lock
     pthread_mutex_lock(&m->lock->m_lock);
@@ -17,44 +42,22 @@ void *serv_send_thread(void *arg){
     
     printf("serv serv_send_thread() get lock\n");
 
-    int st;
-    int ret = clientInit(&st, "192.168.1.199", 8080);
-    printf("serv serv_send_thread() staring clientInit(%d)\n", st);
-    if(ret < 0){
-        perror("clietn init fail");
-        pthread_mutex_unlock(&m->lock->m_lock);
-        goto FREE_RESOURCES;
-    }
-
-    printf("serv serv_send_thread()  clientInit() success!\n");
-
-    FILE *fp = (FILE *)m->data;
-    printf("the file ptr = %p\n", fp);
-
-    char buf[BUFF_SIZE] = {0};
-
-    while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
-        send_ret = send(st, buf, send_len, 0);
-    }
-
-    printf("serv serv_send_thread()  send() success!\n");
-
-    if(send_ret == -1){
-        printf("send error!\n");
+    if(m->send_cb_t.cb != NULL){
+        m->send_cb_t.cb(m, m->send_cb_t.arg);
     }
 
 FREE_RESOURCES:
     pthread_mutex_unlock(&m->lock->m_lock);
-    close(st);
     printf("@@@@@@free the file ptr = %p@@@@@@\n", fp);
     printf("^^^^^^free the model struct^^^^^^\n");
-    if(fp){
-        fclose(fp);
+
+    printf("#####unlink the file: %s; ptr: %p#####\n", m->fileName, fp);
+
+    int unlinkRet = unlink(m->fileName);
+    if(unlinkRet == -1){
+        perror("[ERROR] unlink error");
     }
 
-    printf("#####unlink the file#####\n");
-    unlink(m->fileName);
-    
     free(m);
 
     unset_lock_used_flag(m->lock);
@@ -81,11 +84,11 @@ void *serv_recv_thread(void *arg){
 
     FILE *fp = fdopen(fd, "wb+");
 
-    printf("fileName: %s\n", fileName);
+    printf("fileName: %s; ptr: %p\n", fileName, fp);
 
     RecvModel *m = (RecvModel *)arg;
 
-    m->fileName = fileName;   
+    m->fileName = strdup(fileName);   
     m->data = (void *)fp;
 
     char operatorFlag = 0;
@@ -99,6 +102,11 @@ void *serv_recv_thread(void *arg){
 
     if(operatorFlag == 1){
         printf("recv complete, send signal to send_thr IN\n");
+
+        if(m->recv_cb_t.cb != NULL){
+            m->recv_cb_t.cb(m, m->recv_cb_t.arg);
+        }
+
         pthread_cond_signal(&m->lock->c_lock); 
     }
 
@@ -107,8 +115,7 @@ void *serv_recv_thread(void *arg){
     return NULL;
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]){
     int st = servInit("0.0.0.0", 8081);
     while(1){
         RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
@@ -141,6 +148,9 @@ int main(int argc, char const *argv[])
 
             continue;
         }else{
+            model->send_cb_t.cb = send_cb;
+            model->recv_cb_t.cb = recv_cb;
+
             if(pthread_create(&thr_recv, NULL, serv_recv_thread, model) != 0){
                 printf("create thread failed ! \n");
                 goto END;

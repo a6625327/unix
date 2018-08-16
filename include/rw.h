@@ -17,4 +17,6 @@
 
 char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr);
 
+char serv_write_to_socket(int sockt, FILE *fp);
+
 #endif // !__RW_H__

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <time.h>
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -18,6 +19,11 @@
 #include "structUtil.h"
 
 #define BUFF_SIZE 2048
+
+#define TRUE 1
+#define FALSE 0
+
+typedef unsigned char bool;
 
 void perr_exit(const char *str){
     perror(str);
@@ -43,6 +49,9 @@ int clientInit(int *ct, const char *ipaddr, const int port){
     inet_pton(AF_INET, ipaddr, &s_addr.sin_addr.s_addr);
 
     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
+    if(ret < 0){
+        perror("clietn init fail");
+    }
     return ret;
 };
 

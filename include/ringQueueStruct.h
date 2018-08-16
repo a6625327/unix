@@ -74,6 +74,7 @@
 typedef void* ring_queue_t;
 
 typedef ring_queue_t *ring_queue_ptr ptr_ring_queue_t;
+
 typedef struct {
     unsigned short  ring_buf_of_cnt;                /* Number of characters in the ring buffer currently */
     unsigned short  ring_buf_size;                  /* Ring buffer Size (per buffer) */    
