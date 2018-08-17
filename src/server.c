@@ -1,5 +1,5 @@
 #include "../include/server.h"
-
+// 思路：收和发必须独立出一个函数，王博要求的是收文->存，读->发文
 void send_cb(void *recv_mode, void *arg){
     // do sth
     RecvModel *m = (RecvModel *)recv_mode;
@@ -23,7 +23,7 @@ void send_cb(void *recv_mode, void *arg){
 
 void recv_cb(void *recv_mode, void *arg){
     // do sth
-    
+
 }
 
 void *serv_send_thread(void *arg){
