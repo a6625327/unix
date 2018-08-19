@@ -13,6 +13,9 @@
 // for strerror()
 #include <string.h>
 
+// for log
+#include "userLog.h"
+
 #define BUFF_SIZE 2048
 
 char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr);

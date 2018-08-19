@@ -18,6 +18,8 @@
 
 #include "structUtil.h"
 
+#include "userLog.h"
+
 #define BUFF_SIZE 2048
 
 #define TRUE 1
@@ -30,6 +32,8 @@ void perr_exit(const char *str){
     exit(1);
 }
 
+
+
 /*****************************************************************************
  函数名称  :  clientInit()
  函数描述  :  client init 
@@ -40,7 +44,15 @@ void perr_exit(const char *str){
  返回值    :  int， 没任何错误返回0
 *****************************************************************************/
 int clientInit(int *ct, const char *ipaddr, const int port){
+    LOG_FUN;
+
     *ct = socket(AF_INET, SOCK_STREAM, 0);
+    
+    // reuse the socket
+    int on = 1;
+    if(setsockopt(*ct, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
+        zlog_error(log_all, "faset sockpotiled ! error message %s", strerror(errno));
+    }
 
     struct sockaddr_in s_addr;
 
@@ -50,7 +62,12 @@ int clientInit(int *ct, const char *ipaddr, const int port){
 
     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
     if(ret < 0){
-        perror("clietn init fail");
+        zlog_error(log_all, "clietn init fail, errorMsg: %s", strerror(errno));
+        zlog_notice(log_all, "close socket No: %d", *ct);
+
+        close(*ct);
+
+        zlog_info(log_all, "now the *ct: %d", *ct);
     }
     return ret;
 };
@@ -64,16 +81,18 @@ int clientInit(int *ct, const char *ipaddr, const int port){
  返回值    :  int， socket descriptor
 *****************************************************************************/
 int servInit(const char *ipaddr, const int port){
+    LOG_FUN;
+
     int st = socket(AF_INET, SOCK_STREAM, 0);
     if(st == -1){
-        printf("open socket failed! error message:%s\n", strerror(errno));
+        zlog_error(log_all, "open socket failed! error message:%s", strerror(errno));
         return -1;
     }
 
     // reuse the socket
     int on = 1;
     if(setsockopt(st, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
-        printf(" faset sockpotiled ! error message %s\n", strerror(errno));
+        zlog_error(log_all, " faset sockpotiled ! error message %s", strerror(errno));
         goto END;
     }
 
@@ -90,13 +109,13 @@ int servInit(const char *ipaddr, const int port){
     inet_pton(AF_INET, ipaddr, &addr.sin_addr.s_addr);
 
     if(bind(st, (struct sockaddr *) &addr, sizeof(addr)) == -1){
-        printf("bind ip failed ! error message :%s\n", strerror(errno));
+        zlog_error(log_all, "bind ip failed ! error message :%s", strerror(errno));
         goto END;
     }
 
 
     if(listen(st, 1) == -1){
-        printf("listen failed ! error message :%s\n", strerror(errno));
+        zlog_error(log_all, "listen failed ! error message :%s", strerror(errno));
         goto END;
     }
 

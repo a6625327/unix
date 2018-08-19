@@ -2,6 +2,7 @@
 #define __LOCK_MGR_H__
 
 #include "structUtil.h"
+#include "userLog.h"
 
 #include <stdio.h>
 

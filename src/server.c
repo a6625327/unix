@@ -2,19 +2,23 @@
 // 思路：收和发必须独立出一个函数，王博要求的是收文->存，读->发文
 void send_cb(void *recv_mode, void *arg){
     // do sth
+    LOG_FUN;
+
     RecvModel *m = (RecvModel *)recv_mode;
 
     int st;
     int ret = clientInit(&st, "192.168.1.199", 8080);
 
     FILE *fp = (FILE *)m->data;
+    
+    zlog_info(log_all, "clien's socket No: %d", st);
 
-    printf("serv serv_send_thread() staring clientInit(%d)\n", st);
     if(ret < 0){
+        zlog_error(log_all, "the clientInit() ret: %d", ret);
         return;
     }
 
-    printf("serv serv_send_thread()  clientInit() success!\n");
+    zlog_notice(log_all, "start wirite to socket");
 
     serv_write_to_socket(st, fp);
 
@@ -23,12 +27,14 @@ void send_cb(void *recv_mode, void *arg){
 
 void recv_cb(void *recv_mode, void *arg){
     // do sth
-
+    LOG_FUN;
 }
 
 void *serv_send_thread(void *arg){
+    LOG_FUN;
+
     if(arg == NULL){
-        printf("param is not allow NULL!\n");
+        zlog_error(log_all, "param is not allow NULL!");
         return NULL;
     }
     
@@ -40,51 +46,53 @@ void *serv_send_thread(void *arg){
     pthread_mutex_lock(&m->lock->m_lock);
     pthread_cond_wait(&m->lock->c_lock, &m->lock->m_lock);
     
-    printf("serv serv_send_thread() get lock\n");
+    zlog_info(log_all, "serv serv_send_thread() get lock");
 
     if(m->send_cb_t.cb != NULL){
+        zlog_debug(log_all, "start to call the serv_send cb");
         m->send_cb_t.cb(m, m->send_cb_t.arg);
     }
 
 FREE_RESOURCES:
     pthread_mutex_unlock(&m->lock->m_lock);
-    printf("@@@@@@free the file ptr = %p@@@@@@\n", fp);
-    printf("^^^^^^free the model struct^^^^^^\n");
 
-    printf("#####unlink the file: %s; ptr: %p#####\n", m->fileName, fp);
+    zlog_info(log_all, "free the file ptr = %p", fp);
+    zlog_info(log_all, "free the model struct");
+    zlog_info(log_all, "unlink the file: %s; ptr: %p", m->fileName, fp);
 
     int unlinkRet = unlink(m->fileName);
     if(unlinkRet == -1){
-        perror("[ERROR] unlink error");
+        zlog_error(log_all, "unlink error");
     }
 
     free(m);
 
     unset_lock_used_flag(m->lock);
 
-    printf("now exit the send_thr\n");
+    zlog_info(log_all, "now exit the send_thr");
+
     return NULL;
 }
 
 void *serv_recv_thread(void *arg){
+    LOG_FUN;
 
     if(arg == NULL){
-        printf("param is not allow NULL!\n");   
+        zlog_info(log_all, "param is not allow NULL");
         return NULL;
     }
 
     char fileName[] = "tmpFile_XXXXXX";
 
     int fd;
-    if((fd = mkstemp(fileName))==-1)
-    {
-        printf("Creat temp file faile./n");
+    if((fd = mkstemp(fileName))==-1){   
+        zlog_info(log_all, "Creat temp file faile");
         return NULL;
     }
 
     FILE *fp = fdopen(fd, "wb+");
 
-    printf("fileName: %s; ptr: %p\n", fileName, fp);
+    zlog_info(log_all, "fileName: %s; ptr: %p", fileName, fp);
 
     RecvModel *m = (RecvModel *)arg;
 
@@ -101,21 +109,27 @@ void *serv_recv_thread(void *arg){
     pthread_mutex_unlock(&m->lock->m_lock);
 
     if(operatorFlag == 1){
-        printf("recv complete, send signal to send_thr IN\n");
+        zlog_info(log_all, "recv complete, send signal to send_thr IN");
 
         if(m->recv_cb_t.cb != NULL){
+            zlog_debug(log_all, "start to call the serv_recv cb");
             m->recv_cb_t.cb(m, m->recv_cb_t.arg);
         }
 
         pthread_cond_signal(&m->lock->c_lock); 
     }
 
-    printf("recv complete, now exit the recv_thr OUT\n");
+    zlog_info(log_all, "recv complete, now exit the recv_thr OUT");
+
     close(m->st);
     return NULL;
 }
 
 int main(int argc, char const *argv[]){
+    LOG_FUN;
+
+    log_init();
+
     int st = servInit("0.0.0.0", 8081);
     while(1){
         RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
@@ -129,35 +143,32 @@ int main(int argc, char const *argv[]){
         int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
 
         if(client_st == -1){
-            printf("accept failed ! error message :%s\n", strerror(errno));
+            zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
             exit(1);
-            goto END;
         } 
 
         model->st = client_st;
         model->addr = &client_addr;
-        printf("accept ip=%s\n", inet_ntoa(client_addr.sin_addr));
+        zlog_info(log_all, "accept ip=%s", inet_ntoa(client_addr.sin_addr));
 
         pthread_t thr_send, thr_recv;
 
         model->lock = test_lock();
 
         if(model->lock == NULL){
-            unset_lock_used_flag(model->lock);
             close(client_st);
-
             continue;
         }else{
             model->send_cb_t.cb = send_cb;
             model->recv_cb_t.cb = recv_cb;
 
             if(pthread_create(&thr_recv, NULL, serv_recv_thread, model) != 0){
-                printf("create thread failed ! \n");
+                zlog_info(log_all, "create thread failed !");
                 goto END;
             }
 
             if(pthread_create(&thr_send, NULL, serv_send_thread, model) != 0){
-                printf("create thread failed ! \n");
+                zlog_info(log_all, "create thread failed !");
                 goto END;
             }
         }

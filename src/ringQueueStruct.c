@@ -183,6 +183,8 @@ ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr){
 */
 
 short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short len){
+    LOG_FUN;
+
     ptr_ring_queue_t pPosQ,pCurQ,pCurB,pEndB;
     unsigned short rLen,Cnt;
     if(len > ptr_queue->ring_buf_of_cnt){
@@ -223,6 +225,8 @@ short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned shor
 */
 
 void RingQueueClear(ring_queue *ptr_queue){
+    LOG_FUN;
+
 #if(RQ_ARGUMENT_CHECK_EN == TRUE)
     if(ptr_queue == 0x00){
         return;
@@ -238,6 +242,8 @@ void RingQueueClear(ring_queue *ptr_queue){
 *********************************************************************************************************
 */
 static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t* pPointer){
+    LOG_FUN;
+
     if (++*pPointer == ptr_queue->ring_buf_end){
         *pPointer = ptr_queue->ring_buf;        /* Wrap OUT pointer                          */  
     }  

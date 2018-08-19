@@ -8,6 +8,9 @@
 #ifndef   ring_queue_H
 #define   ring_queue_H
 
+// for log
+#include "userLog.h"
+
 /*
 ********************************************************************************************
 *                                   MISCELLANEOUS

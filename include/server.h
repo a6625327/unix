@@ -5,4 +5,6 @@
 #include "rw.h"
 #include "lockMgr.h"
 
+#include "userLog.h"
+
 #endif // !__SERVER_H__
