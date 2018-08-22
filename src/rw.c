@@ -1,6 +1,6 @@
 #include "../include/rw.h"
 
-char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr){
+char recv_write_to_tmpFile(int socket, FILE *fp, struct in_addr sin_addr){
     LOG_FUN;
 
     char buf[BUFF_SIZE] = {0};
@@ -10,7 +10,7 @@ char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr){
 
     int writeCnt = 0;
     while(1){
-        flag = recv(sockt, buf, sizeof(buf), 0);
+        flag = recv(socket, buf, sizeof(buf), 0);
         if(flag == 0){
             zlog_info(log_all, "对方已经关闭连接！");
             operatorFlag = 1;

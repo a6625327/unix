@@ -6,5 +6,7 @@
 #include "lockMgr.h"
 
 #include "userLog.h"
+#include "fileInfo.h"
+#include "ringQueueStruct.h"
 
 #endif // !__SERVER_H__

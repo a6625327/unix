@@ -34,11 +34,11 @@
 *********************************************************************************************************
 */
 
-#if(RQ_ARGUMENT_CHECK_EN == TRUE)
+#if(RQ_ARGUMENT_CHECK_EN == true)
     #define argCheck(cond, err, rVal)  if(cond) { *perr = (err); return (rVal); }
 #else
     #define argCheck(cond, err, rVal)
-#endif // of (SPI_ARGUMENT_CHECK_EN == TRUE)
+#endif // of (SPI_ARGUMENT_CHECK_EN == true)
 
 
 
@@ -227,7 +227,7 @@ short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned shor
 void RingQueueClear(ring_queue *ptr_queue){
     LOG_FUN;
 
-#if(RQ_ARGUMENT_CHECK_EN == TRUE)
+#if(RQ_ARGUMENT_CHECK_EN == true)
     if(ptr_queue == 0x00){
         return;
     }

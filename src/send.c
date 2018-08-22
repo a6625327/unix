@@ -2,21 +2,22 @@
 
 int main(int argc, char const *argv[])
 {
-    while(1){
+    // while(1){
 
         FILE *fp = fopen("../test.xml", "rb");
         printf("the file is open, the ptr: %p\n", fp);
 
         if(fp == NULL){
             perror("open file error");
-            exit(-1);
+            // exit(-1);
+            pause();
         }
 
         int ct;
         int ret = clientInit(&ct, "192.168.1.199", 8081);
         if(ret < 0){
             perror("clietn init fail");
-            exit(-1);
+            pause();
         }
 
         int send_len = 0;
@@ -35,14 +36,15 @@ int main(int argc, char const *argv[])
         if(send_ret == -1){
             printf("send error!\n");
         }
-        printf("=========send Complete==========!\n");
+        printf("=========send Complete==========!\n\n");
 
         fclose(fp);
-        close(ct);
-    }
+        // close(ct);
+        pause();
+    // }
     
 
-END: ;
+// END: ;
     // close(st);
 
     return 0;

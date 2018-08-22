@@ -22,18 +22,6 @@
 
 #define BUFF_SIZE 2048
 
-#define TRUE 1
-#define FALSE 0
-
-typedef unsigned char bool;
-
-void perr_exit(const char *str){
-    perror(str);
-    exit(1);
-}
-
-
-
 /*****************************************************************************
  函数名称  :  clientInit()
  函数描述  :  client init 

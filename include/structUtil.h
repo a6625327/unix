@@ -1,6 +1,18 @@
 #ifndef __STRUCT_UTIL_H__
 #define __STRUCT_UTIL_H__
+
 #include <pthread.h>
+
+
+#ifndef  false
+#define  false    0
+#endif
+
+#ifndef  true
+#define  true     1
+#endif
+
+typedef unsigned char bool;
 
 // call function
 typedef void (*cb_fn)(void *preserve, void *arg);
@@ -14,6 +26,7 @@ struct thread_lock{
     char use_flag;
     pthread_mutex_t m_lock; 
     pthread_cond_t c_lock;  
+    bool singal_;
 };
 
 typedef struct _recvmodel{

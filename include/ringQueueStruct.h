@@ -17,12 +17,12 @@
 ********************************************************************************************
 */
 
-#ifndef  FALSE
-#define  FALSE    0
+#ifndef  false
+#define  false    0
 #endif
 
-#ifndef  TRUE
-#define  TRUE     1
+#ifndef  true
+#define  true     1
 #endif
 
 /*
@@ -49,7 +49,7 @@
 *********************************************************************************************************
 */
 
-#define RQ_ARGUMENT_CHECK_EN    TRUE     // TRUE: arguments will be checked, however,this will 
+#define RQ_ARGUMENT_CHECK_EN    true     // true: arguments will be checked, however,this will 
                                          //       cost a little code volume.
 
 /*
@@ -107,8 +107,8 @@ void RingQueueClear(ring_queue *ptr_queue);
 *
 * Arguments   :  ptr_queue  pointer to the ring queue control block;     指向环形队列控制块的指针
 *
-* Return      :  TRUE    the RingQueue is empty.
-*                FALSE   the RingQueue is not empty.
+* Return      :  true    the RingQueue is empty.
+*                false   the RingQueue is not empty.
 * Note(s)     :
 *********************************************************************************************************
 */
@@ -123,8 +123,8 @@ void RingQueueClear(ring_queue *ptr_queue);
 *
 * Arguments   : ptr_queue  pointer to the ring queue control block;   指向环形队列控制块的指针
 *
-* Return      : TRUE    the RingQueue is full.
-*               FALSE   the RingQueue is not full.
+* Return      : true    the RingQueue is full.
+*               false   the RingQueue is not full.
 * Note(s)     :
 *********************************************************************************************************
 */

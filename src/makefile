@@ -1,6 +1,6 @@
 .SUFFIXES:.c .o
 CC=gcc
-SRCS1=server.c rw.c lockMgr.c userLog.c
+SRCS1=server.c rw.c lockMgr.c userLog.c ringQueueStruct.c
 # SRCS2=client.c
 SRCS2=send.c userLog.c
 SRCS3=recv.c userLog.c
