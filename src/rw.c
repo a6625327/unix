@@ -9,23 +9,39 @@ char recv_write_to_tmpFile(int socket, FILE *fp, struct in_addr sin_addr){
     char operatorFlag = 0;
 
     int writeCnt = 0;
+    zlog_info(log_all, "the fp need to write: %p", fp);
+
     while(1){
         flag = recv(socket, buf, sizeof(buf), 0);
+        // zlog_info(log_all, "recv Num: %d", flag);
+        // zlog_info(log_all, "recv buf\n: %s", buf);
+
+        if(flag < sizeof(buf)){
+            if(ferror(fp)){
+                zlog_error(log_all, "recv error, Msg: %s", strerror(errno));
+            }
+            if(feof(fp)){
+                zlog_info(log_all, "recv encounter end!");
+            }
+        }
+
         if(flag == 0){
             zlog_info(log_all, "对方已经关闭连接！");
             operatorFlag = 1;
             break;
         }else if(flag == -1){
             zlog_warn(log_all, "recv failed ! error message : %s", strerror(errno));
-            operatorFlag = -1;
+            operatorFlag = -1;  
             break;
         }
-        if((writeCnt = fwrite(buf, sizeof(char), flag, fp)) < 0){
+        if((writeCnt = fwrite(buf, sizeof(char), flag, fp)) != flag){
             zlog_error(log_all, "recv fwrite fail ! error message : %s", strerror(errno));
             operatorFlag = -1;
             break;
         }
+        zlog_info(log_all, "write Count: %d", writeCnt);
     }
+    fflush(fp);
 
     zlog_info(log_all, "recv operatorFlag： %d", operatorFlag);
 

@@ -3,10 +3,6 @@
 
 #include "common.h"
 
-#ifndef QUEUE_LEN
-#define QUEUE_LEN 64
-#endif // !QUEUE_LEN
-
 // file_info struct
 typedef struct _fileInfo_t{
     time_t time;

@@ -2,7 +2,7 @@
 
 int main(int argc, char const *argv[])
 {
-    // while(1){
+    while(1){
 
         FILE *fp = fopen("../test.xml", "rb");
         printf("the file is open, the ptr: %p\n", fp);
@@ -24,10 +24,16 @@ int main(int argc, char const *argv[])
         int send_ret = 1;
 
         char buf[BUFF_SIZE] = {0};
+        printf("the ret: %d\n", ret);
+
         printf("=========start Send==========!\n");
 
-        while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
+        while((send_len = fread(buf, 1, BUFF_SIZE, fp))){
+            printf("fread ret: %d\n", send_len);
             send_ret = send(ct, buf, send_len, 0);
+            if(send_ret == -1){
+                perror("send error: %s");
+            }
             printf("send_len: %d\n", send_len);
             printf("sen_content: %s\n", buf);
             memset(buf, 0, BUFF_SIZE);
@@ -39,9 +45,8 @@ int main(int argc, char const *argv[])
         printf("=========send Complete==========!\n\n");
 
         fclose(fp);
-        // close(ct);
-        pause();
-    // }
+        close(ct);
+    }
     
 
 // END: ;

@@ -94,7 +94,7 @@ typedef struct {
 */
 
 ring_queue *RingQueueInit(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short bufSize, unsigned char *perr);
-unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr);
+unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr, ptr_ring_queue_t discard_data);
 ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr);
 short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short len);
 void RingQueueClear(ring_queue *ptr_queue);

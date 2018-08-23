@@ -19,8 +19,12 @@ start:$(OBJS1) $(OBJS2) $(OBJS3)
 	$(CC) -o $(EXEC1) $(OBJS1) $(LIB) $(OPTION)
 	$(CC) -o $(EXEC2) $(OBJS2) $(LIB) $(OPTION)
 	$(CC) -o $(EXEC3) $(OBJS3) $(LIB) $(OPTION)
-	@echo "^_^ ------ OK ------ ^_^"
 	rm -f *.o
+	rm -f core
+	rm -f recv
+	rm -f tmpFile*
+	echo '' > error.log
+	echo '' > rw.c.log
 .c.o:
 	$(CC) -Wall -g -o $@ -c $<
 clean:
@@ -31,3 +35,5 @@ clean:
 	rm -f core
 	rm -f recv
 	rm -f tmpFile*
+	echo '' > error.log
+	echo '' > rw.c.log

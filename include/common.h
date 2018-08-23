@@ -51,7 +51,7 @@ int clientInit(int *ct, const char *ipaddr, const int port){
     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
     if(ret < 0){
         zlog_error(log_all, "clietn init fail, errorMsg: %s", strerror(errno));
-        zlog_notice(log_all, "close socket No: %d", *ct);
+        zlog_info(log_all, "close socket No: %d", *ct);
 
         close(*ct);
 

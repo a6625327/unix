@@ -2,11 +2,13 @@
 // 思路：收和发必须独立出一个函数
 
 #ifndef QUEUE_LEN
-#define QUEUE_LEN 64
+#define QUEUE_LEN 5
 #endif // !QUEUE_LEN
 
 ring_queue queue;
 unsigned char err; // 环形队列错误输出
+
+pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // 发送数据线程回调
 void send_cb(void *recv_mode, void *arg){
@@ -24,7 +26,11 @@ void send_cb(void *recv_mode, void *arg){
     if(ret < 0){
         zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
     }else{
+        
+        pthread_mutex_lock(&queue_lock);
         f_info  = (FileInfoPtr)RingQueueOut(&queue, &err);
+        pthread_mutex_unlock(&queue_lock);
+
         fp = f_info->fp;
 
         zlog_info(log_all, "clien's socket No: %d", st);
@@ -52,7 +58,6 @@ void send_cb(void *recv_mode, void *arg){
 
         close(st);
     }
-    
     
 }
 
@@ -83,22 +88,14 @@ void *serv_send_thread(void *arg){
     zlog_info(log_all, "serv serv_send_thread() get lock");
 
     if(m->send_cb_t.cb != NULL){
-        zlog_debug(log_all, "start to call the serv_send cb");
+        zlog_info(log_all, "start to call the serv_send cb");
         m->send_cb_t.cb(m, m->send_cb_t.arg);
     }
 
 // FREE_RESOURCES:
     pthread_mutex_unlock(&m->lock->m_lock);
 
-    // zlog_info(log_all, "close the fp ptr: %p", m->fileName, fp);
-    // fclose(fp);
-
-    // zlog_info(log_all, "unlink the file: %s; ptr: %p", m->fileName, fp);
-    // int unlinkRet = unlink(m->fileName);
-    // if(unlinkRet == -1){
-    //     zlog_error(log_all, "unlink error");
-    // }
-
+    free(m->addr);
     free(m);
 
     unset_lock_used_flag(m->lock);
@@ -135,7 +132,21 @@ void *serv_recv_thread(void *arg){
     pthread_mutex_lock(&m->lock->m_lock);
 
     FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
-    RingQueueIn(&queue, (void *)file_info_ptr, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err);
+    FileInfoPtr discard_file_info = NULL;
+
+    pthread_mutex_lock(&queue_lock);
+    RingQueueIn(&queue, (ptr_ring_queue_t)file_info_ptr, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, (ptr_ring_queue_t)(&discard_file_info));
+    pthread_mutex_unlock(&queue_lock);
+
+    if(err == RQ_ERR_BUFFER_FULL){
+        zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
+        
+        unlink(discard_file_info->file_name);
+        fclose(discard_file_info->fp);
+        
+        file_info_destory(discard_file_info);
+    }
+    
     file_info_ptr->fp = fp;
 
     zlog_info(log_all, "the socket No: %d, the addr: %s", m->st, inet_ntoa(m->addr->sin_addr));
@@ -147,7 +158,7 @@ void *serv_recv_thread(void *arg){
         zlog_info(log_all, "recv complete, send signal to send_thr");
 
         if(m->recv_cb_t.cb != NULL){
-            zlog_debug(log_all, "start to call the serv_recv cb");
+            zlog_info(log_all, "start to call the serv_recv cb");
             m->recv_cb_t.cb(m, m->recv_cb_t.arg);
         }
 
@@ -169,19 +180,22 @@ int main(int argc, char const *argv[]){
     log_init();
 
     static ring_queue_t queueBuf[QUEUE_LEN];
-    RingQueueInit(&queue, queueBuf, QUEUE_LEN, &err);
 
+    pthread_mutex_lock(&queue_lock);
+    RingQueueInit(&queue, queueBuf, QUEUE_LEN, &err);
+    pthread_mutex_unlock(&queue_lock);
+    
     int st = servInit("0.0.0.0", 8081);
     while(1){
         RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
 
         // accept the client(block)
-        struct sockaddr_in client_addr;
-        memset(&client_addr, 0, sizeof(client_addr));
+        struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+        memset(client_addr, 0, sizeof(struct sockaddr_in));
         
         socklen_t client_addrLen = sizeof(struct sockaddr);
 
-        int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
+        int client_st = accept(st, (struct sockaddr *)client_addr, &client_addrLen);
 
         if(client_st == -1){
             zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
@@ -190,8 +204,8 @@ int main(int argc, char const *argv[]){
         } 
 
         model->st = client_st;
-        model->addr = &client_addr;
-        zlog_info(log_all, "accept from ip=%s", inet_ntoa(client_addr.sin_addr));
+        model->addr = client_addr;
+        zlog_info(log_all, "accept from ip=%s", inet_ntoa(client_addr->sin_addr));
 
         pthread_t thr_send, thr_recv;
 

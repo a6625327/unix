@@ -112,12 +112,16 @@ ring_queue* RingQueueInit(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned
 *********************************************************************************************************
 */
 
-unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr){
+unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr, ptr_ring_queue_t discard_data){
     argCheck(ptr_queue == 0x00, RQ_ERR_POINTER_NULL, 0x00);
 
     if(ptr_queue->ring_buf_of_cnt >= ptr_queue->ring_buf_size){
         *perr = RQ_ERR_BUFFER_FULL;     
+        
         if(option == RQ_OPTION_WHEN_FULL_DISCARD_FIRST){
+            zlog_notice(log_all, "the discard ptr: %p", ptr_queue->ring_buf_in_ptr);
+
+            *discard_data = *ptr_queue->ring_buf_in_ptr;
             _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr); /* Wrap OUT pointer                          */  
         }else{                                            // option == RQ_OPTION_WHEN_FULL_DONT_IN
             return ptr_queue->ring_buf_of_cnt;
@@ -128,6 +132,9 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
     }
     *ptr_queue->ring_buf_in_ptr = data;                       /* Put character into buffer                */  
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_in_ptr);      /* Wrap IN pointer                          */  
+
+    zlog_notice(log_all, "now the count: %d", ptr_queue->ring_buf_of_cnt);
+
     return ptr_queue->ring_buf_of_cnt;
 }
 
@@ -156,6 +163,8 @@ ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr){
     ring_queue_t data;
     argCheck(ptr_queue == 0x00, RQ_ERR_POINTER_NULL,0x00);
     if(ptr_queue->ring_buf_of_cnt == 0){
+        zlog_notice(log_all, "the queue is empty");
+
         *perr = RQ_ERR_BUFFER_EMPTY;        
         return 0;
     }
@@ -163,6 +172,7 @@ ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr){
     data = *ptr_queue->ring_buf_out_ptr;                      /* Get character from buffer                */  
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr);        /* Wrap OUT pointer                          */  
     *perr = RQ_ERR_NONE;
+
     return data;
 }
 
