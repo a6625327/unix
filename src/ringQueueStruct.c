@@ -49,11 +49,11 @@
 // 内部使用，给定将给定指针在环形缓冲区内向前移动一步(到尾了会移回头)
 static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t* pPointer);
 
-unsigned char ring_queue_in_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t *data, ptr_ring_queue_t *discard_file_info, pthread_mutex_t *lock){
+unsigned char ring_queue_in_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t *data, ptr_ring_queue_t discard_file_info, pthread_mutex_t *lock){
     unsigned char err;
 
     pthread_mutex_lock(lock);
-    RingQueueIn(ptr_queue, (ptr_ring_queue_t)data, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, (ptr_ring_queue_t)(&discard_file_info));
+    RingQueueIn(ptr_queue, (ptr_ring_queue_t)data, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, discard_file_info);
     pthread_mutex_unlock(lock);
 
     return err;

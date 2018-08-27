@@ -15,8 +15,6 @@ void send_cb(void *recv_mode, void *arg){
     // do sth
     LOG_FUN;
 
-    // RecvModel *m = (RecvModel *)recv_mode;
-
     int st, writeRet;
     FileInfoPtr f_info;
     FILE *fp;
@@ -34,11 +32,9 @@ void send_cb(void *recv_mode, void *arg){
         fp = f_info->fp;
 
         zlog_info(log_all, "clien's socket No: %d", st);
-        
-        zlog_notice(log_all, "start wirite to socket");
 
         if((writeRet = serv_write_to_socket(st, fp)) == -1){
-            zlog_error(log_all, "send error, ret: %d; Error Msg: %s", ret, strerror(errno));
+            zlog_error(log_all, "send error, ret: %d; Error Msg: %s", writeRet, strerror(errno));
         }
 
         zlog_info(log_all, "FileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
@@ -46,7 +42,6 @@ void send_cb(void *recv_mode, void *arg){
         if(writeRet == -1){
             fclose(fp);
         }else{
-            zlog_info(log_all, "send ret: %d", ret);
             zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
 
             file_info_destory(f_info);
@@ -78,7 +73,7 @@ void *serv_send_thread(void *arg){
     wait_signal_RecvModel(m);
 
     // cb
-    zlog_info(log_all, "serv serv_send_thread() get lock");
+    zlog_info(log_all, "send_thr has got the signal lock");
     if(m->send_cb_t.cb != NULL){
         zlog_info(log_all, "start to call the serv_send cb");
         m->send_cb_t.cb(m, m->send_cb_t.arg);
@@ -86,21 +81,13 @@ void *serv_send_thread(void *arg){
 
     free_RecvModelRes(m);
 
-    zlog_info(log_all, "now exit the send_thr");
-
     return NULL;
 }
 
 void *serv_recv_thread(void *arg){
     LOG_FUN;
 
-    if(arg == NULL){
-        zlog_info(log_all, "param is not allow NULL");
-        return NULL;
-    }
-
     char fileName[] = "tmpFile_XXXXXX";
-
     int fd;
     if((fd = mkstemp(fileName))==-1){   
         zlog_info(log_all, "Creat temp file faile");
@@ -108,8 +95,6 @@ void *serv_recv_thread(void *arg){
     }
 
     FILE *fp = fdopen(fd, "wb+");
-
-    zlog_info(log_all, "fileName: %s; ptr: %p", fileName, fp);
 
     RecvModel *m = (RecvModel *)arg;
 
@@ -121,9 +106,6 @@ void *serv_recv_thread(void *arg){
     FileInfoPtr discard_file_info = NULL;
 
     ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
-    // pthread_mutex_lock(&queue_lock);
-    // RingQueueIn(&queue, (ptr_ring_queue_t)file_info_ptr, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, (ptr_ring_queue_t)(&discard_file_info));
-    // pthread_mutex_unlock(&queue_lock);
 
     if(err == RQ_ERR_BUFFER_FULL){
         zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
@@ -132,7 +114,7 @@ void *serv_recv_thread(void *arg){
     
     file_info_ptr->fp = fp;
 
-    zlog_info(log_all, "the socket No: %d, the addr: %s", m->st, inet_ntoa(m->addr->sin_addr));
+    zlog_info(log_all, "the socket No: %d, the client addr: %s", m->st, inet_ntoa(m->addr->sin_addr));
 
     // confilct opera
     operatorFlag = recv_write_to_tmpFile(m->st, fp, m->addr->sin_addr);
@@ -148,7 +130,6 @@ void *serv_recv_thread(void *arg){
         signal_RecvMode(m);
     }
 
-    zlog_info(log_all, "now release the m_lock");
     pthread_mutex_unlock(&m->lock->m_lock);
     
     close(m->st);
@@ -187,7 +168,6 @@ int main(int argc, char const *argv[]){
 
         model->st = client_st;
         model->addr = client_addr;
-        zlog_info(log_all, "accept from ip=%s", inet_ntoa(client_addr->sin_addr));
 
         pthread_t thr_send, thr_recv;
 
@@ -202,16 +182,12 @@ int main(int argc, char const *argv[]){
 
             if(pthread_create(&thr_recv, NULL, serv_recv_thread, model) != 0){
                 zlog_info(log_all, "create thread failed !");
-                goto END;
             }
 
             if(pthread_create(&thr_send, NULL, serv_send_thread, model) != 0){
                 zlog_info(log_all, "create thread failed !");
-                goto END;
             }
         }
-        
-END: ; 
     }
     return 0;
 }
