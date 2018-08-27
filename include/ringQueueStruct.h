@@ -11,6 +11,9 @@
 // for log
 #include "userLog.h"
 
+// for pthread
+#include <pthread.h>
+
 /*
 ********************************************************************************************
 *                                   MISCELLANEOUS
@@ -98,6 +101,8 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
 ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr);
 short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short len);
 void RingQueueClear(ring_queue *ptr_queue);
+unsigned char ring_queue_in_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t *data, ptr_ring_queue_t *discard_file_info, pthread_mutex_t *lock);
+unsigned char ring_queue_init_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t pbuf,unsigned short queue_len, pthread_mutex_t *lock);
 
 /*
 *********************************************************************************************************

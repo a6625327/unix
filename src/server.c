@@ -49,8 +49,6 @@ void send_cb(void *recv_mode, void *arg){
             zlog_info(log_all, "send ret: %d", ret);
             zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
 
-            unlink(f_info->file_name);
-            fclose(fp);
             file_info_destory(f_info);
         }
         
@@ -76,29 +74,17 @@ void *serv_send_thread(void *arg){
     }
     
     RecvModel *m = (RecvModel *)arg;
-    
-    // get lock and wait lock
-    pthread_mutex_lock(&m->lock->m_lock);
-    
-    while(m->lock->singal_ != true){
-        pthread_cond_wait(&m->lock->c_lock, &m->lock->m_lock);
-    }
-    m->lock->singal_ = false;
 
+    wait_signal_RecvModel(m);
+
+    // cb
     zlog_info(log_all, "serv serv_send_thread() get lock");
-
     if(m->send_cb_t.cb != NULL){
         zlog_info(log_all, "start to call the serv_send cb");
         m->send_cb_t.cb(m, m->send_cb_t.arg);
     }
 
-// FREE_RESOURCES:
-    pthread_mutex_unlock(&m->lock->m_lock);
-
-    free(m->addr);
-    free(m);
-
-    unset_lock_used_flag(m->lock);
+    free_RecvModelRes(m);
 
     zlog_info(log_all, "now exit the send_thr");
 
@@ -134,16 +120,13 @@ void *serv_recv_thread(void *arg){
     FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
     FileInfoPtr discard_file_info = NULL;
 
-    pthread_mutex_lock(&queue_lock);
-    RingQueueIn(&queue, (ptr_ring_queue_t)file_info_ptr, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, (ptr_ring_queue_t)(&discard_file_info));
-    pthread_mutex_unlock(&queue_lock);
+    ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
+    // pthread_mutex_lock(&queue_lock);
+    // RingQueueIn(&queue, (ptr_ring_queue_t)file_info_ptr, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, (ptr_ring_queue_t)(&discard_file_info));
+    // pthread_mutex_unlock(&queue_lock);
 
     if(err == RQ_ERR_BUFFER_FULL){
         zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
-        
-        unlink(discard_file_info->file_name);
-        fclose(discard_file_info->fp);
-        
         file_info_destory(discard_file_info);
     }
     
@@ -162,9 +145,7 @@ void *serv_recv_thread(void *arg){
             m->recv_cb_t.cb(m, m->recv_cb_t.arg);
         }
 
-        m->lock->singal_ = true;
-
-        pthread_cond_signal(&m->lock->c_lock); 
+        signal_RecvMode(m);
     }
 
     zlog_info(log_all, "now release the m_lock");
@@ -181,9 +162,10 @@ int main(int argc, char const *argv[]){
 
     static ring_queue_t queueBuf[QUEUE_LEN];
 
-    pthread_mutex_lock(&queue_lock);
-    RingQueueInit(&queue, queueBuf, QUEUE_LEN, &err);
-    pthread_mutex_unlock(&queue_lock);
+    ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN, &queue_lock);
+    // pthread_mutex_lock(&queue_lock);
+    // RingQueueInit(&queue, queueBuf, QUEUE_LEN, &err);
+    // pthread_mutex_unlock(&queue_lock);
     
     int st = servInit("0.0.0.0", 8081);
     while(1){

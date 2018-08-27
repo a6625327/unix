@@ -2,7 +2,8 @@
 #define __STRUCT_UTIL_H__
 
 #include <pthread.h>
-
+#include <stdlib.h>
+#include "lockMgr.h"
 
 #ifndef  false
 #define  false    0

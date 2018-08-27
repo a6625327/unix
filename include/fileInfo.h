@@ -33,6 +33,10 @@ FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
 }
 
 void file_info_destory(FileInfoPtr p){
+    // unlink file and close the file dp
+    unlink(p->file_name);
+    fclose(p->fp);
+
     free(p->src_dev_ip);
     free(p->save_path);
     free(p->file_name);
