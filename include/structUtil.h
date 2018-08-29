@@ -28,6 +28,7 @@ struct thread_lock{
     pthread_mutex_t m_lock; 
     pthread_cond_t c_lock;  
     bool singal_;
+    const unsigned char lock_no;
 };
 
 typedef struct _recvmodel{

@@ -4,7 +4,7 @@ int main(int argc, char const *argv[])
 {
     while(1){
 
-        FILE *fp = fopen("../test.xml", "rb");
+        FILE *fp = fopen("test.xml", "rb");
         printf("the file is open, the ptr: %p\n", fp);
 
         if(fp == NULL){
@@ -14,7 +14,7 @@ int main(int argc, char const *argv[])
         }
 
         int ct;
-        int ret = clientInit(&ct, "192.168.1.199", 8081);
+        int ret = clientInit(&ct, "192.168.199.203", 8081);
         if(ret < 0){
             perror("clietn init fail");
             pause();

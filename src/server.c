@@ -6,7 +6,6 @@
 #endif // !QUEUE_LEN
 
 ring_queue queue;
-unsigned char err; // 环形队列错误输出
 
 pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -19,15 +18,13 @@ void send_cb(void *recv_mode, void *arg){
     FileInfoPtr f_info;
     FILE *fp;
 
-    int ret = clientInit(&st, "192.168.1.191", 8080);
+    int ret = clientInit(&st, "192.168.199.203", 8080);
 
     if(ret < 0){
         zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
     }else{
-        
-        pthread_mutex_lock(&queue_lock);
-        f_info  = (FileInfoPtr)RingQueueOut(&queue, &err);
-        pthread_mutex_unlock(&queue_lock);
+        // I can add the lock in the c src file
+        ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info, &queue_lock);
 
         fp = f_info->fp;
 
@@ -62,14 +59,15 @@ void recv_cb(void *recv_mode, void *arg){
 
 void *serv_send_thread(void *arg){
     LOG_FUN;
-
+    
     if(arg == NULL){
         zlog_error(log_all, "param is not allow NULL!");
         return NULL;
     }
     
     RecvModel *m = (RecvModel *)arg;
-
+    
+    zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
     wait_signal_RecvModel(m);
 
     // cb
@@ -105,7 +103,7 @@ void *serv_recv_thread(void *arg){
     FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
     FileInfoPtr discard_file_info = NULL;
 
-    ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
+    unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
 
     if(err == RQ_ERR_BUFFER_FULL){
         zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
@@ -171,6 +169,8 @@ int main(int argc, char const *argv[]){
         model->lock = test_lock();
 
         if(model->lock == NULL){
+            zlog_error(log_all, "the model->lock is null");
+
             close(client_st);
             continue;
         }else{

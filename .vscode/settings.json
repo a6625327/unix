@@ -5,6 +5,7 @@
         "lockmgr.h": "c",
         "rw.h": "c",
         "userlog.h": "c",
-        "client.h": "c"
+        "client.h": "c",
+        "server.h": "c"
     }
 }
