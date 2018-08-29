@@ -8,12 +8,14 @@ message("the serv_src: " ${serv_src})
 
 LINK_DIRECTORIES(
     /usr/local/lib
-    ${PROJECT_SOURCE_DIR}/lib
+    # ${PROJECT_SOURCE_DIR}/lib
 )
 
-ADD_EXECUTABLE(serv server.c ${serv_src})
-ADD_EXECUTABLE(recv recv.c ${serv_src})
-ADD_EXECUTABLE(send send.c ${serv_src})
+add_library(obj OBJECT ${serv_src})
+
+ADD_EXECUTABLE(serv server.c $<TARGET_OBJECTS:obj>)
+ADD_EXECUTABLE(recv recv.c $<TARGET_OBJECTS:obj>)
+ADD_EXECUTABLE(send send.c $<TARGET_OBJECTS:obj>)
 
 target_link_libraries(serv
     zlog

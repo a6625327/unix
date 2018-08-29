@@ -6,5 +6,5 @@ else
 fi
 
 cd build
-cmake --build .. --clean-first
+cmake .. 
 make
