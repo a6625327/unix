@@ -6,5 +6,7 @@ else
 fi
 
 cd build
-cmake .. 
+cmake  -DCMAKE_BUILD_TYPE=Debug ..  ##R elease
 make
+
+# strip serv
