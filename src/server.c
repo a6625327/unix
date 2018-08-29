@@ -1,4 +1,4 @@
-#include "../include/server.h"
+#include "server.h"
 // 思路：收和发必须独立出一个函数
 
 #ifndef QUEUE_LEN
@@ -121,9 +121,6 @@ void *serv_recv_thread(void *arg){
     FileInfoPtr discard_file_info = NULL;
 
     ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
-    // pthread_mutex_lock(&queue_lock);
-    // RingQueueIn(&queue, (ptr_ring_queue_t)file_info_ptr, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, (ptr_ring_queue_t)(&discard_file_info));
-    // pthread_mutex_unlock(&queue_lock);
 
     if(err == RQ_ERR_BUFFER_FULL){
         zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
@@ -163,9 +160,6 @@ int main(int argc, char const *argv[]){
     static ring_queue_t queueBuf[QUEUE_LEN];
 
     ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN, &queue_lock);
-    // pthread_mutex_lock(&queue_lock);
-    // RingQueueInit(&queue, queueBuf, QUEUE_LEN, &err);
-    // pthread_mutex_unlock(&queue_lock);
     
     int st = servInit("0.0.0.0", 8081);
     while(1){
@@ -182,7 +176,7 @@ int main(int argc, char const *argv[]){
         if(client_st == -1){
             zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
             // exit(1);
-            pause();
+            // pause();
         } 
 
         model->st = client_st;

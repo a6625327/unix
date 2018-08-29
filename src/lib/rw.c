@@ -1,4 +1,4 @@
-#include "../include/rw.h"
+#include "rw.h"
 
 char recv_write_to_tmpFile(int socket, FILE *fp, struct in_addr sin_addr){
     LOG_FUN;

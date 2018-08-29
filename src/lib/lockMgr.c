@@ -1,4 +1,4 @@
-#include "../include/lockMgr.h"
+#include "lockMgr.h"
 
 #include <unistd.h>
 

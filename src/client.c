@@ -1,4 +1,4 @@
-#include "../include/client.h"
+#include "client.h"
 
 pthread_mutex_t m_lock = PTHREAD_MUTEX_INITIALIZER; 
 pthread_cond_t c_lock = PTHREAD_COND_INITIALIZER;  

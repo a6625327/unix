@@ -1,9 +1,9 @@
-#include "../include/userLog.h"
+#include "userLog.h"
 
 int log_init(){
     int rc;
 
-    rc = zlog_init("../logConf/zlog.conf");
+    rc = zlog_init("logConf/zlog.conf");
 
     if (rc) {
 

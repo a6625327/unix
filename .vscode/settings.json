@@ -1,6 +1,10 @@
 {
     "files.associations": {
         "unistd.h": "c",
-        "ringqueuestruct.h": "c"
+        "ringqueuestruct.h": "c",
+        "lockmgr.h": "c",
+        "rw.h": "c",
+        "userlog.h": "c",
+        "client.h": "c"
     }
 }
