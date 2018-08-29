@@ -8,7 +8,7 @@ message("the serv_src: " ${serv_src})
 
 LINK_DIRECTORIES(
     /usr/local/lib
-    # ${PROJECT_SOURCE_DIR}/lib
+    ${PROJECT_SOURCE_DIR}/lib
 )
 
 add_library(obj OBJECT ${serv_src})
