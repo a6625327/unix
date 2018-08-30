@@ -1,11 +1,9 @@
 #include "client.h"
 
-int main(int argc, char const *argv[])
-{
+void recv_test(const char *ip, const int port){
     while(1){
-        int st = servInit("0.0.0.0", 8080);
+        int st = servInit(ip, port);
 
-        // accept the client(block)
         struct sockaddr_in client_addr;
         memset(&client_addr, 0, sizeof(client_addr));
         
@@ -39,6 +37,9 @@ int main(int argc, char const *argv[])
                 break;
             }
 
+            printf("the recv count: %d\n", flag);
+            printf("the recv content: %s\n", buf);
+
             snprintf(out, flag, "%s", buf);
             printf("%s", out);
             memset(out, 0, flag);
@@ -50,4 +51,9 @@ int main(int argc, char const *argv[])
             perror("client recv fail");
         }
     }
+}
+
+int main(int argc, char const *argv[])
+{
+    recv_test("0.0.0.0", 8080);
 }

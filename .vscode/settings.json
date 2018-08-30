@@ -6,6 +6,8 @@
         "rw.h": "c",
         "userlog.h": "c",
         "client.h": "c",
-        "server.h": "c"
+        "server.h": "c",
+        "*.tcc": "c",
+        "fstream": "c"
     }
 }

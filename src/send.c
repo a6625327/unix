@@ -1,23 +1,23 @@
 #include "client.h"
 
-int main(int argc, char const *argv[])
-{
+void send_test(const char *file_path, const char *ip, const int port){
     while(1){
-
-        FILE *fp = fopen("test.xml", "rb");
+        FILE *fp = fopen(file_path, "rb");
         printf("the file is open, the ptr: %p\n", fp);
 
         if(fp == NULL){
             perror("open file error");
-            // exit(-1);
-            pause();
+            exit(-1);
+            // pause();
         }
 
         int ct;
-        int ret = clientInit(&ct, "192.168.199.203", 8081);
+        // int ret = clientInit(&ct, "192.168.199.203", 8081);
+        int ret = clientInit(&ct, ip, port);
         if(ret < 0){
             perror("clietn init fail");
-            pause();
+            continue;
+            // pause();
         }
 
         int send_len = 0;
@@ -47,10 +47,12 @@ int main(int argc, char const *argv[])
         fclose(fp);
         close(ct);
     }
-    
+}
 
-// END: ;
-    // close(st);
+
+int main(int argc, char const *argv[])
+{
+    send_test("test.xml", "192.168.199.203", 8081);
 
     return 0;
 }
