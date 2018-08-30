@@ -1,4 +1,4 @@
-set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}")
+set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/bin")
 set(LINK_LIBRATIES zlog pthread)
 set(EXEC_BIN serv recv send)
 

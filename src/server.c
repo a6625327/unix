@@ -18,10 +18,14 @@ void send_cb(void *recv_mode, void *arg){
     FileInfoPtr f_info;
     FILE *fp;
 
-    int ret = clientInit(&st, "192.168.199.203", 8080);
+    int recv_ret = *(int *)(arg);
+
+    int ret = clientInit(&st, "192.168.1.199", 8080);
 
     if(ret < 0){
         zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
+    }else if(recv_ret == -1){
+        zlog_error(log_all, "the recv write to fail FAIL, the recv_ret: %d", recv_ret);
     }else{
         // I can add the lock in the c src file
         ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info, &queue_lock);
@@ -46,9 +50,9 @@ void send_cb(void *recv_mode, void *arg){
         
         zlog_info(log_all, "clien's socket No: %d", st);
 
-        close(st);
     }
-    
+
+    close(st);
 }
 
 // 接受数据线程回调
@@ -60,6 +64,8 @@ void recv_cb(void *recv_mode, void *arg){
 void *serv_send_thread(void *arg){
     LOG_FUN;
     
+    pthread_detach(pthread_self());
+
     if(arg == NULL){
         zlog_error(log_all, "param is not allow NULL!");
         return NULL;
@@ -68,14 +74,18 @@ void *serv_send_thread(void *arg){
     RecvModel *m = (RecvModel *)arg;
     
     zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
-    wait_signal_RecvModel(m);
 
+    pthread_mutex_lock(&m->lock->m_lock);
+
+    wait_signal_RecvModel(m);
     // cb
     zlog_info(log_all, "send_thr has got the signal lock");
     if(m->send_cb_t.cb != NULL){
         zlog_info(log_all, "start to call the serv_send cb");
         m->send_cb_t.cb(m, m->send_cb_t.arg);
     }
+
+    pthread_mutex_unlock(&m->lock->m_lock);
 
     free_RecvModelRes(m);
 
@@ -84,11 +94,13 @@ void *serv_send_thread(void *arg){
 
 void *serv_recv_thread(void *arg){
     LOG_FUN;
+    
+    pthread_detach(pthread_self());
 
     char fileName[] = "tmpFile_XXXXXX";
     int fd;
     if((fd = mkstemp(fileName))==-1){   
-        zlog_info(log_all, "Creat temp file faile");
+        zlog_error(log_all, "Creat temp file faile");
         return NULL;
     }
 
@@ -96,37 +108,43 @@ void *serv_recv_thread(void *arg){
 
     RecvModel *m = (RecvModel *)arg;
 
+    zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
+
     char operatorFlag = 0;
 
     pthread_mutex_lock(&m->lock->m_lock);
-
-    FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
-    FileInfoPtr discard_file_info = NULL;
-
-    unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
-
-    if(err == RQ_ERR_BUFFER_FULL){
-        zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
-        file_info_destory(discard_file_info);
-    }
-    
-    file_info_ptr->fp = fp;
-
-    zlog_info(log_all, "the socket No: %d, the client addr: %s", m->st, inet_ntoa(m->addr->sin_addr));
-
     // confilct opera
     operatorFlag = recv_write_to_tmpFile(m->st, fp, m->addr->sin_addr);
 
+    m->send_cb_t.arg = (void *)&operatorFlag;
+
     if(operatorFlag == 1){
         zlog_info(log_all, "recv complete, send signal to send_thr");
+
+        FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
+        FileInfoPtr discard_file_info = NULL;
+
+        unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
+
+        if(err == RQ_ERR_BUFFER_FULL){
+            zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
+            file_info_destory(discard_file_info);
+        }
+        
+        file_info_ptr->fp = fp;
+
+        zlog_info(log_all, "the socket No: %d, the client addr: %s", m->st, inet_ntoa(m->addr->sin_addr));
 
         if(m->recv_cb_t.cb != NULL){
             zlog_info(log_all, "start to call the serv_recv cb");
             m->recv_cb_t.cb(m, m->recv_cb_t.arg);
         }
-
-        signal_RecvMode(m);
+    }else{
+        unlink(fileName);
+        fclose(fp);
     }
+    
+    signal_RecvMode(m);
 
     pthread_mutex_unlock(&m->lock->m_lock);
     
@@ -184,6 +202,8 @@ int main(int argc, char const *argv[]){
             if(pthread_create(&thr_send, NULL, serv_send_thread, model) != 0){
                 zlog_info(log_all, "create thread failed !");
             }
+
+            zlog_info(log_all, "the thr: 0x%x and 0x%x get the cnt: %d", (unsigned int)thr_recv, (unsigned int)thr_send, model->lock->lock_no);
         }
     }
     return 0;

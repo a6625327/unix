@@ -8,6 +8,10 @@
         "client.h": "c",
         "server.h": "c",
         "*.tcc": "c",
-        "fstream": "c"
+        "fstream": "c",
+        "array": "c",
+        "istream": "c",
+        "tuple": "c",
+        "utility": "c"
     }
 }

@@ -1,6 +1,6 @@
 #! /bin/sh
 
-rm *.log
+rm -rv bin/tmp*
 
 cd build
 make clean
