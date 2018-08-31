@@ -71,7 +71,7 @@ void *serv_send_thread(void *arg){
         return NULL;
     }
     
-    RecvModel *m = (RecvModel *)arg;
+    RecvModel *m = arg;
     
     zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
 
@@ -106,7 +106,7 @@ void *serv_recv_thread(void *arg){
 
     FILE *fp = fdopen(fd, "wb+");
 
-    RecvModel *m = (RecvModel *)arg;
+    RecvModel *m = arg;
 
     zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
 
@@ -116,7 +116,7 @@ void *serv_recv_thread(void *arg){
     // confilct opera
     operatorFlag = recv_write_to_tmpFile(m->st, fp, m->addr->sin_addr);
 
-    m->send_cb_t.arg = (void *)&operatorFlag;
+    m->send_cb_t.arg = &operatorFlag;
 
     if(operatorFlag == 1){
         zlog_info(log_all, "recv complete, send signal to send_thr");

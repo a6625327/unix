@@ -79,7 +79,7 @@
 // define the data type that stores in the RingQueue.       定义存在环形缓冲区内的数据的类型
 typedef void* ring_queue_t;
 
-typedef ring_queue_t *ring_queue_ptr ptr_ring_queue_t;
+typedef ring_queue_t* ptr_ring_queue_t;
 
 typedef struct {
     unsigned short  ring_buf_of_cnt;                /* Number of characters in the ring buffer currently */
