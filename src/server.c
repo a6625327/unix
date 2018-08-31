@@ -203,7 +203,7 @@ int main(int argc, char const *argv[]){
                 zlog_info(log_all, "create thread failed !");
             }
 
-            zlog_info(log_all, "the thr: 0x%x and 0x%x get the cnt: %d", (unsigned int)thr_recv, (unsigned int)thr_send, model->lock->lock_no);
+            zlog_info(log_all, "the thr: 0x%x and 0x%x get the lock, the cnt: %d", (unsigned int)thr_recv, (unsigned int)thr_send, model->lock->lock_no);
         }
     }
     return 0;
