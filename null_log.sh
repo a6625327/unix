@@ -12,4 +12,7 @@ for file in ${dir}/*; do
     fi
 done
 
-sh clean.sh
+rm -rv bin/tmp*
+
+cd build
+make clean
