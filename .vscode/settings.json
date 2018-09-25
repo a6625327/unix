@@ -12,6 +12,10 @@
         "array": "c",
         "istream": "c",
         "tuple": "c",
-        "utility": "c"
+        "utility": "c",
+        "iniparser.h": "c",
+        "stdlib.h": "c",
+        "cstdlib": "c",
+        "conf.h": "c"
     }
 }

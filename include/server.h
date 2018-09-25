@@ -4,6 +4,7 @@
 #include "common.h"
 #include "rw.h"
 #include "lockMgr.h"
+#include "conf.h"
 
 #include "userLog.h"
 #include "fileInfo.h"

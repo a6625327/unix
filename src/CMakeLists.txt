@@ -1,16 +1,19 @@
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/bin")
-set(LINK_LIBRATIES zlog pthread)
+set(LINK_LIBRATIES zlog pthread iniparser) 
 set(EXEC_BIN serv recv send)
 
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/lib/ serv_src)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/util/ serv_src)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/lib
+)
 
-message("the serv_src: " ${serv_src})
+# message("the serv_src: " ${serv_src})
 
 link_directories(
-    /usr/local/lib
-    ${PROJECT_SOURCE_DIR}/lib
+    /usr/local/util
+    ${PROJECT_SOURCE_DIR}/util
 )
 
 add_library(obj OBJECT ${serv_src})

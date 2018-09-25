@@ -157,6 +157,8 @@ int main(int argc, char const *argv[]){
 
     log_init();
 
+    get_network_config("../conf/network.ini");
+
     static ring_queue_t queueBuf[QUEUE_LEN];
 
     ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN, &queue_lock);

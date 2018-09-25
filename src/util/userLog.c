@@ -3,7 +3,7 @@
 int log_init(){
     int rc;
 
-    rc = zlog_init("../logConf/zlog.conf");
+    rc = zlog_init("../conf/zlog.conf");
 
     if (rc) {
         printf("init failed\n");
