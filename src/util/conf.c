@@ -3,6 +3,7 @@
 dictionary *ini;
 struct conf_struct CONF;
 
+// 内部私有函数声明
 int get_conf_int(const char *key, int notfound);
 const char* get_conf_string(const char *key, char* def);
 
@@ -21,20 +22,26 @@ struct conf_struct get_network_config(const char *cont_path){
 
     CONF.src_ip = get_conf_string("src:ip", "null");
     CONF.dest_ip = get_conf_string("dest:ip", "null");
+    CONF.serv_init_ip = get_conf_string("serv_init:ip", "null");
 
     CONF.src_port = get_conf_int("src:port", -1);
     CONF.dest_port = get_conf_int("dest:port", -1);
+    CONF.serv_init_port = get_conf_int("serv_init:port", -1);
 
     zlog_info(log_all, "****CONF LIST START:****");
     zlog_info(log_all, "    src:ip: %s", CONF.src_ip);
     zlog_info(log_all, "    dest:ip: %s", CONF.dest_ip);
+    zlog_info(log_all, "    serv_init:ip: %s", CONF.serv_init_ip);
     zlog_info(log_all, "    src:port: %d", CONF.src_port);
     zlog_info(log_all, "    dest:port: %d", CONF.dest_port);
+    zlog_info(log_all, "    serv_init:port: %d", CONF.serv_init_port);
     zlog_info(log_all, "****CONF LIST EDN   ****");
 
-    iniparser_freedict(ini);//free dirctionary obj
-
     return CONF;
+}
+
+void free_network_conf(){
+    iniparser_freedict(ini);//free dirctionary obj
 }
 
 int get_conf_int(const char *key, int notfound){

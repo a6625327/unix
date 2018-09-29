@@ -20,7 +20,7 @@ void send_cb(void *recv_mode, void *arg){
 
     int recv_ret = *(int *)(arg);
 
-    int ret = clientInit(&st, "192.168.1.199", 8080);
+    int ret = clientInit(&st, CONF.dest_ip, CONF.dest_port);
 
     if(ret < 0){
         zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
@@ -163,7 +163,7 @@ int main(int argc, char const *argv[]){
 
     ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN, &queue_lock);
     
-    int st = servInit("0.0.0.0", 8081);
+    int st = servInit(CONF.serv_init_ip, CONF.serv_init_port);
     while(1){
         RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
 

@@ -10,6 +10,8 @@
 #include "fileInfo.h"
 #include "ringQueueStruct.h"
 
+extern struct conf_struct CONF;
+
 void wait_signal_RecvModel(RecvModel *m);
 void free_RecvModelRes(RecvModel *m);
 
