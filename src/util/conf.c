@@ -3,23 +3,7 @@
 dictionary *ini;
 struct conf_struct CONF;
 
-// 内部私有函数声明
-int get_conf_int(const char *key, int notfound);
-const char* get_conf_string(const char *key, char* def);
-
-struct conf_struct get_network_config(const char *cont_path){
-    LOG_FUN;
-
-    int n = 0;
-
-    zlog_info(log_all, "start to init conf file");
-
-    ini = iniparser_load(cont_path); //parser the file
-    if(ini == NULL){
-        zlog_error(log_all, "can not open %s",cont_path);
-        exit(EXIT_FAILURE);
-    }
-
+void conf_cb(){
     CONF.src_ip = get_conf_string("src:ip", "null");
     CONF.dest_ip = get_conf_string("dest:ip", "null");
     CONF.serv_init_ip = get_conf_string("serv_init:ip", "null");
@@ -36,8 +20,22 @@ struct conf_struct get_network_config(const char *cont_path){
     zlog_info(log_all, "    dest:port: %d", CONF.dest_port);
     zlog_info(log_all, "    serv_init:port: %d", CONF.serv_init_port);
     zlog_info(log_all, "****CONF LIST EDN   ****");
+}
 
-    return CONF;
+void get_network_config(const char *cont_path, conf_cb_fn cb){
+    LOG_FUN;
+
+    int n = 0;
+
+    zlog_info(log_all, "start to init conf file");
+
+    ini = iniparser_load(cont_path); //parser the file
+    if(ini == NULL){
+        zlog_error(log_all, "can not open %s",cont_path);
+        exit(EXIT_FAILURE);
+    }
+    
+    cb();
 }
 
 void free_network_conf(){

@@ -16,6 +16,7 @@
         "iniparser.h": "c",
         "stdlib.h": "c",
         "cstdlib": "c",
-        "conf.h": "c"
+        "conf.h": "c",
+        "common.h": "c"
     }
 }

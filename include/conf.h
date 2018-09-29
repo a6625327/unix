@@ -15,8 +15,13 @@ struct conf_struct{
 };
 
 // extern struct conf_struct CONF;
+typedef void (*conf_cb_fn)();
 
-struct conf_struct get_network_config(const char *cont_path);
+void get_network_config(const char *cont_path, conf_cb_fn cb);
+int get_conf_int(const char *key, int notfound);
+const char* get_conf_string(const char *key, char* def);
+
+void conf_cb();
 
 void free_network_conf();
 

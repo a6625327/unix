@@ -1,6 +1,28 @@
 #include "client.h"
 
+struct send_struct{
+    int port;
+    const char *ip;
+};
+
+struct send_struct CONF;
+
+void sent_test_conf_cb(){
+    CONF.ip = get_conf_string("send_test:ip", "null");
+    CONF.port = get_conf_int("send_test:port", -1);
+
+    zlog_info(log_all, "****CONF LIST START:****");
+    zlog_info(log_all, "    send_test:ip: %s", CONF.ip);
+    zlog_info(log_all, "    send_test:port: %d", CONF.port);
+    zlog_info(log_all, "****CONF LIST EDN   ****");
+}
+
 void send_test(const char *file_path, const char *ip, const int port){
+
+    log_init();
+
+    get_network_config("../conf/send_test.ini", sent_test_conf_cb);
+
     while(1){
         FILE *fp = fopen(file_path, "rb");
         printf("the file is open, the ptr: %p\n", fp);
