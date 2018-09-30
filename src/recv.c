@@ -1,5 +1,23 @@
 #include "client.h"
 
+struct recv_struct{
+    int port;
+    const char *ip;
+};
+
+struct recv_struct CONF;
+
+void recv_test_conf_cb(){
+    CONF.ip = get_conf_string("recv_test:ip", "null");
+    CONF.port = get_conf_int("recv_test:port", -1);
+
+    zlog_info(log_recv_test, "****CONF LIST START:****");
+    zlog_info(log_recv_test, "    recv_test:ip: %s", CONF.ip);
+    zlog_info(log_recv_test, "    recv_test:port: %d", CONF.port);
+    zlog_info(log_recv_test, "****CONF LIST EDN   ****");
+}
+
+struct recv_struct CONF;
 void recv_test(const char *ip, const int port){
     while(1){
         int st = servInit(ip, port);
@@ -9,15 +27,16 @@ void recv_test(const char *ip, const int port){
         
         socklen_t client_addrLen = sizeof(client_addr);
 
-        printf("cli starting to accept!\n");
+        zlog_info(log_recv_test, "cli starting to accept!");
+
         int client_st = accept(st, (struct sockaddr *)&client_addr, &client_addrLen);
 
         if(client_st == -1){
-            printf("accept failed ! error message :%s\n", strerror(errno));
+            zlog_error(log_recv_test, "accept failed ! error message :%s", strerror(errno));
             exit(-1);
         } 
         
-        printf("client accept by=%s\n", inet_ntoa(client_addr.sin_addr));
+        zlog_info(log_recv_test, "client accept by=%s", inet_ntoa(client_addr.sin_addr));
 
         int flag = 0;
         char operatorFlag = 0;
@@ -28,32 +47,37 @@ void recv_test(const char *ip, const int port){
         while(1){
             flag = recv(client_st, buf, sizeof(buf), 0);
             if(flag == 0){
-                printf("对方已经关闭连接！\n");
+                zlog_notice(log_recv_test, "对方已经关闭连接！");
                 operatorFlag = 1;
                 break;
             }else if(flag == -1){
-                printf("recv failed ! error message : %s\n", strerror(errno));
+                zlog_error(log_recv_test, "recv failed ! error message : %s", strerror(errno));
                 operatorFlag = -1;
                 break;
             }
 
-            printf("the recv count: %d\n", flag);
-            printf("the recv content: %s\n", buf);
+            zlog_info(log_recv_test, "the recv count: %d", flag);
+            zlog_info(log_recv_test, "the recv content: %s", buf);
 
             snprintf(out, flag, "%s", buf);
-            printf("%s", out);
+            zlog_info(log_recv_test, "%s", out);
+
             memset(out, 0, flag);
         }
 
         close(st);
         
         if(operatorFlag == -1){
-            perror("client recv fail");
+            zlog_error(log_recv_test, "client recv fail");
         }
     }
 }
 
 int main(int argc, char const *argv[])
 {
-    recv_test("0.0.0.0", 8080);
+    log_init();
+    
+    get_network_config("../conf/recv_test.ini", recv_test_conf_cb);
+
+    recv_test(CONF.ip, CONF.port);
 }

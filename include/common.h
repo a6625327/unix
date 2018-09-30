@@ -32,8 +32,6 @@
  返回值    :  int， 没任何错误返回0
 *****************************************************************************/
 int clientInit(int *ct, const char *ipaddr, const int port){
-    LOG_FUN;
-
     *ct = socket(AF_INET, SOCK_STREAM, 0);
     
     // reuse the socket
@@ -69,8 +67,6 @@ int clientInit(int *ct, const char *ipaddr, const int port){
  返回值    :  int， socket descriptor
 *****************************************************************************/
 int servInit(const char *ipaddr, const int port){
-    LOG_FUN;
-
     int st = socket(AF_INET, SOCK_STREAM, 0);
     if(st == -1){
         zlog_error(log_all, "open socket failed! error message:%s", strerror(errno));

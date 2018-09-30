@@ -12,7 +12,7 @@ pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 // 发送数据线程回调
 void send_cb(void *recv_mode, void *arg){
     // do sth
-    LOG_FUN;
+    LOG_FUN_SEND_TEST;
 
     int st, writeRet;
     FileInfoPtr f_info;
@@ -58,11 +58,11 @@ void send_cb(void *recv_mode, void *arg){
 // 接受数据线程回调
 void recv_cb(void *recv_mode, void *arg){
     // do sth
-    LOG_FUN;
+    LOG_FUN_SEND_TEST;
 }
 
 void *serv_send_thread(void *arg){
-    LOG_FUN;
+    LOG_FUN_SEND_TEST;
     
     pthread_detach(pthread_self());
 
@@ -93,7 +93,7 @@ void *serv_send_thread(void *arg){
 }
 
 void *serv_recv_thread(void *arg){
-    LOG_FUN;
+    LOG_FUN_SEND_TEST;
     
     pthread_detach(pthread_self());
 
@@ -153,7 +153,7 @@ void *serv_recv_thread(void *arg){
 }
 
 int main(int argc, char const *argv[]){
-    LOG_FUN;
+    LOG_FUN_SEND_TEST;
 
     log_init();
 

@@ -11,17 +11,19 @@ int log_init(){
     }
 
     log_all = zlog_get_category("log_all");
+    log_recv_test = zlog_get_category("log_recv_test");
+    log_send_test = zlog_get_category("log_send_test");
 
-    if (!log_all) {
+    if (!log_all || !log_recv_test || !log_send_test) {
 
-        printf("get cat fail\n");
+        printf("get category fail\n");
         zlog_fini();
         return -2;
     }
 
-    LOG_FUN;
-
-    zlog_info(log_all, "zlog init success");
+    zlog_info(log_all, "log_all init success");
+    zlog_info(log_recv_test, "log_recv_test init success");
+    zlog_info(log_send_test, "log_send_test init success");
     
     return 0;
 }

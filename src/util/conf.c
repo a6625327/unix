@@ -23,8 +23,6 @@ void conf_cb(){
 }
 
 void get_network_config(const char *cont_path, conf_cb_fn cb){
-    LOG_FUN;
-
     int n = 0;
 
     zlog_info(log_all, "start to init conf file");
@@ -43,8 +41,6 @@ void free_network_conf(){
 }
 
 int get_conf_int(const char *key, int notfound){
-    LOG_FUN;
-
     int n = 0;
     n = iniparser_getint(ini, key, notfound);
 
@@ -52,8 +48,6 @@ int get_conf_int(const char *key, int notfound){
 }
 
 const char* get_conf_string(const char *key, char* def){
-    LOG_FUN;
-
     const char *str;
     str = iniparser_getstring(ini, key, def);
 
