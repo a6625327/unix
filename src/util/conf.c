@@ -3,6 +3,7 @@
 dictionary *ini;
 struct conf_struct CONF;
 
+// 读取配置文件后的回调函数
 void conf_cb(){
     CONF.src_ip = get_conf_string("src:ip", "null");
     CONF.dest_ip = get_conf_string("dest:ip", "null");
