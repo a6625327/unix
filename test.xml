@@ -10,16 +10,17 @@
     </div>
 </body>
 
-deb http://archive.ubuntu.com/ubuntu/ raring main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ raring-security main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ raring-updates main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ raring-proposed main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ raring-backports main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ raring main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ raring-security main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ raring-updates main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ raring-proposed main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ raring-backports main restricted universe multiverse
+deb http://ubuntu.srt.cn/ubuntu/ trusty main restricted universe multiverse
+deb http://ubuntu.srt.cn/ubuntu/ trusty-security main restricted universe multiverse
+deb http://ubuntu.srt.cn/ubuntu/ trusty-updates main restricted universe multiverse
+deb http://ubuntu.srt.cn/ubuntu/ trusty-proposed main restricted universe multiverse
+deb http://ubuntu.srt.cn/ubuntu/ trusty-backports main restricted universe multiverse
+deb-src http://ubuntu.srt.cn/ubuntu/ trusty main restricted universe multiverse
+deb-src http://ubuntu.srt.cn/ubuntu/ trusty-security main restricted universe multiverse
+deb-src http://ubuntu.srt.cn/ubuntu/ trusty-updates main restricted universe multiverse
+deb-src http://ubuntu.srt.cn/ubuntu/ trusty-proposed main restricted universe multiverse
+deb-src http://ubuntu.srt.cn/ubuntu/ trusty-backports main restricted universe multiverse
+
 
 [formats]
 # 日志格式
