@@ -10,40 +10,16 @@
     </div>
 </body>
 
-
-deb http://mirrors.aliyun.com/ubuntu/ vivid main restricted universe multiverse
-deb http://mirrors.aliyun.com/ubuntu/ vivid-security main restricted universe multiverse
-deb http://mirrors.aliyun.com/ubuntu/ vivid-updates main restricted universe multiverse
-deb http://mirrors.aliyun.com/ubuntu/ vivid-proposed main restricted universe multiverse
-deb http://mirrors.aliyun.com/ubuntu/ vivid-backports main restricted universe multiverse
-deb-src http://mirrors.aliyun.com/ubuntu/ vivid main restricted universe multiverse
-deb-src http://mirrors.aliyun.com/ubuntu/ vivid-security main restricted universe multiverse
-deb-src http://mirrors.aliyun.com/ubuntu/ vivid-updates main restricted universe multiverse
-deb-src http://mirrors.aliyun.com/ubuntu/ vivid-proposed main restricted universe multiverse
-deb-src http://mirrors.aliyun.com/ubuntu/ vivid-backports main restricted universe multiverse
-
-deb-src http://archive.ubuntu.com/ubuntu xenial main restricted #Added by software-properties
-deb http://mirrors.aliyun.com/ubuntu/ xenial main restricted
-deb-src http://mirrors.aliyun.com/ubuntu/ xenial main restricted multiverse universe #Added by software-properties
-deb http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted
-deb-src http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted multiverse universe #Added by software-properties
-deb http://mirrors.aliyun.com/ubuntu/ xenial universe
-deb http://mirrors.aliyun.com/ubuntu/ xenial-updates universe
-deb http://mirrors.aliyun.com/ubuntu/ xenial multiverse
-deb http://mirrors.aliyun.com/ubuntu/ xenial-updates multiverse
-deb http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse
-deb-src http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse #Added by software-properties
-deb http://archive.canonical.com/ubuntu xenial partner
-deb-src http://archive.canonical.com/ubuntu xenial partner
-deb http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted
-deb-src http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted multiverse universe #Added by software-properties
-deb http://mirrors.aliyun.com/ubuntu/ xenial-security universe
-deb http://mirrors.aliyun.com/ubuntu/ xenial-security multiverse
-
----------------------
-
-本文来自 灏喾 的CSDN 博客 ，全文地址请点击：https://blog.csdn.net/h8178/article/details/79517443?utm_source=copy 
-
+deb http://archive.ubuntu.com/ubuntu/ raring main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ raring-security main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ raring-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ raring-proposed main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ raring-backports main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ raring main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ raring-security main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ raring-updates main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ raring-proposed main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ raring-backports main restricted universe multiverse
 
 [formats]
 # 日志格式
