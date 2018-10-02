@@ -1,6 +1,8 @@
 #ifndef __SERVER_H__
 #define __SERVER_H__
 
+#include <semaphore.h>
+
 #include "common.h"
 #include "rw.h"
 #include "lockMgr.h"

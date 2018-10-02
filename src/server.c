@@ -6,13 +6,12 @@
 #endif // !QUEUE_LEN
 
 ring_queue queue;
-
-pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
+sem_t if_recv_complete;
 
 // 发送数据线程回调
 void send_cb(void *recv_mode, void *arg){
     // do sth
-    LOG_FUN_SEND_TEST;
+    LOG_FUN;
 
     int st, writeRet;
     FileInfoPtr f_info;
@@ -28,7 +27,7 @@ void send_cb(void *recv_mode, void *arg){
         zlog_error(log_all, "the recv write to fail FAIL, the recv_ret: %d", recv_ret);
     }else{
         // I can add the lock in the c src file
-        ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info, &queue_lock);
+        ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info);
 
         fp = f_info->fp;
 
@@ -58,11 +57,11 @@ void send_cb(void *recv_mode, void *arg){
 // 接受数据线程回调
 void recv_cb(void *recv_mode, void *arg){
     // do sth
-    LOG_FUN_SEND_TEST;
+    LOG_FUN;
 }
 
 void *serv_send_thread(void *arg){
-    LOG_FUN_SEND_TEST;
+    LOG_FUN;
     
     pthread_detach(pthread_self());
 
@@ -93,7 +92,7 @@ void *serv_send_thread(void *arg){
 }
 
 void *serv_recv_thread(void *arg){
-    LOG_FUN_SEND_TEST;
+    LOG_FUN;
     
     pthread_detach(pthread_self());
 
@@ -124,7 +123,7 @@ void *serv_recv_thread(void *arg){
         FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
         FileInfoPtr discard_file_info = NULL;
 
-        unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info, &queue_lock);
+        unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
 
         if(err == RQ_ERR_BUFFER_FULL){
             zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
@@ -153,7 +152,7 @@ void *serv_recv_thread(void *arg){
 }
 
 int main(int argc, char const *argv[]){
-    LOG_FUN_SEND_TEST;
+    LOG_FUN;
 
     log_init();
 
@@ -161,36 +160,31 @@ int main(int argc, char const *argv[]){
 
     static ring_queue_t queueBuf[QUEUE_LEN];
 
-    ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN, &queue_lock);
+    ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN);
     
     int st = servInit(CONF.serv_init_ip, CONF.serv_init_port);
     while(1){
         RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
-
+        
         // accept the client(block)
+        socklen_t client_addrLen = sizeof(struct sockaddr);
         struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
         memset(client_addr, 0, sizeof(struct sockaddr_in));
-        
-        socklen_t client_addrLen = sizeof(struct sockaddr);
 
         int client_st = accept(st, (struct sockaddr *)client_addr, &client_addrLen);
 
         if(client_st == -1){
             zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
-            // exit(1);
-            // pause();
         } 
-
-        model->st = client_st;
-        model->addr = client_addr;
 
         pthread_t thr_send, thr_recv;
 
+        model->st = client_st;
+        model->addr = client_addr;
         model->lock = test_lock();
 
         if(model->lock == NULL){
             zlog_error(log_all, "the model->lock is null");
-
             close(client_st);
             continue;
         }else{
@@ -198,11 +192,11 @@ int main(int argc, char const *argv[]){
             model->recv_cb_t.cb = recv_cb;
 
             if(pthread_create(&thr_recv, NULL, serv_recv_thread, model) != 0){
-                zlog_info(log_all, "create thread failed !");
+                zlog_error(log_all, "create thread failed !");
             }
 
             if(pthread_create(&thr_send, NULL, serv_send_thread, model) != 0){
-                zlog_info(log_all, "create thread failed !");
+                zlog_error(log_all, "create thread failed !");
             }
 
             zlog_info(log_all, "the thr: 0x%x and 0x%x get the lock, the cnt: %d", (unsigned int)thr_recv, (unsigned int)thr_send, model->lock->lock_no);

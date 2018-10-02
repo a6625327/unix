@@ -17,6 +17,7 @@
         "stdlib.h": "c",
         "cstdlib": "c",
         "conf.h": "c",
-        "common.h": "c"
+        "common.h": "c",
+        "type_traits": "cpp"
     }
 }
