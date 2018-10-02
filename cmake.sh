@@ -5,11 +5,11 @@ else
     echo "build文件夹已经存在"
 fi
 
-if [ ! -d "bin" ];then
-    mkdir bin
-else
-    echo "bin文件夹已经存在"
-fi
+# if [ ! -d "bin" ];then
+#     mkdir bin
+# else
+#     echo "bin文件夹已经存在"
+# fi
 
 if [ ! -d "log" ];then
     mkdir log
