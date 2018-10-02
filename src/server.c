@@ -5,203 +5,204 @@
 #define QUEUE_LEN 5
 #endif // !QUEUE_LEN
 
+#ifndef THREAD_LEN
+#define THREAD_LEN 3
+#endif // !THREAD_LEN
+
 ring_queue queue;
-sem_t if_recv_complete;
 
-// 发送数据线程回调
-void send_cb(void *recv_mode, void *arg){
-    // do sth
+struct sem_info{
+    sem_t sem;
+    void *data;
+};
+struct sem_info sem_socket_accept;
+struct sem_info sem_send_data;
+struct sem_info sem_recv_data;
+
+struct socket_info{
+    int socket_no;
+    struct sockaddr_in *addr_in;
+};
+
+// struct pthread_info{
+//     pthread_t p_id;
+//     struct socket_info s_in;
+// };
+
+// 处理接受数据以及发送数据的线程，各三个
+pthread_t thr_send[THREAD_LEN];
+pthread_t thr_recv[THREAD_LEN];
+
+void *send_thread(void *arg){
     LOG_FUN;
+    while(1){
+        sem_wait(&sem_recv_data.sem);
 
-    int st, writeRet;
-    FileInfoPtr f_info;
-    FILE *fp;
+        // struct socket_info *s_in = arg;
+        FileInfoPtr f_info;
+        FILE *fp;
 
+        int st;
+        int ret = clientInit(&st, CONF.dest_ip, CONF.dest_port);
 
-    int recv_ret = *(int *)(arg);
-
-    int ret = clientInit(&st, CONF.dest_ip, CONF.dest_port);
-
-    if(ret < 0){
-        zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
-    }else if(recv_ret == -1){
-        zlog_error(log_all, "the recv write to fail FAIL, the recv_ret: %d", recv_ret);
-    }else{
-        // I can add the lock in the c src file
-        ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info);
-
-        fp = f_info->fp;
-
-        zlog_info(log_all, "clien's socket No: %d", st);
-
-        if((writeRet = serv_write_to_socket(st, fp)) == -1){
-            zlog_error(log_all, "send error, ret: %d; Error Msg: %s", writeRet, strerror(errno));
-        }
-
-        zlog_info(log_all, "FileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
-
-        if(writeRet == -1){
-            fclose(fp);
+        if(ret < 0){
+            zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
+            continue;
+        }else if(ret == -1){
+            zlog_error(log_all, "the recv write to fail FAIL, the ret: %d", ret);
+            continue;
         }else{
-            zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
+            // I can add the lock in the c src file
+            ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info);
 
-            file_info_destory(f_info);
+            zlog_info(log_all, "clien's socket No: %d", st);
+
+            int writeRet;
+            if((writeRet = serv_write_to_socket(st, f_info->fp)) == -1){
+                zlog_error(log_all, "send error, ret: %d; Error Msg: %s", writeRet, strerror(errno));
+            }
+
+            zlog_info(log_all, "FileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
+
+            if(writeRet == -1){
+                fclose(fp);
+            }else{
+                zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
+                file_info_destory(f_info);
+            }
+            
+            zlog_info(log_all, "clien's socket No: %d", st);
+
         }
-        
-        zlog_info(log_all, "clien's socket No: %d", st);
-
+        close(st);
     }
-
-    close(st);
 }
 
-// 接受数据线程回调
-void recv_cb(void *recv_mode, void *arg){
-    // do sth
+void *recv_thread(void *arg){
     LOG_FUN;
-}
-
-void *serv_send_thread(void *arg){
-    LOG_FUN;
-    
-    pthread_detach(pthread_self());
-
-    if(arg == NULL){
-        zlog_error(log_all, "param is not allow NULL!");
-        return NULL;
-    }
-    
-    RecvModel *m = arg;
-    
-    zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
-
-    pthread_mutex_lock(&m->lock->m_lock);
-
-    wait_signal_RecvModel(m);
-    // cb
-    zlog_info(log_all, "send_thr has got the signal lock");
-    if(m->send_cb_t.cb != NULL){
-        zlog_info(log_all, "start to call the serv_send cb");
-        m->send_cb_t.cb(m, m->send_cb_t.arg);
-    }
-
-    pthread_mutex_unlock(&m->lock->m_lock);
-
-    free_RecvModelRes(m);
-
-    return NULL;
-}
-
-void *serv_recv_thread(void *arg){
-    LOG_FUN;
-    
-    pthread_detach(pthread_self());
-
     char fileName[] = "tmpFile_XXXXXX";
-    int fd;
-    if((fd = mkstemp(fileName))==-1){   
-        zlog_error(log_all, "Creat temp file faile");
-        return NULL;
-    }
 
-    FILE *fp = fdopen(fd, "wb+");
+    // pthread_detach(pthread_self());
+    while(1){
+        sem_wait(&sem_socket_accept.sem);
 
-    RecvModel *m = arg;
+        struct socket_info *s_in = sem_socket_accept.data;
 
-    zlog_info(log_all, "THE LOCK_NO: %d!!!", m->lock->lock_no);
+        int fd;
+        if((fd = mkstemp(fileName))==-1){   
+            zlog_error(log_all, "Creat temp file faile");
+            return NULL;
+        }
 
-    char operatorFlag = 0;
+        FILE *fp = fdopen(fd, "wb+");
 
-    pthread_mutex_lock(&m->lock->m_lock);
-    // confilct opera
-    operatorFlag = recv_write_to_tmpFile(m->st, fp, m->addr->sin_addr);
+        char recv_status = 0;
+        // confilct opera
+        recv_status = recv_write_to_tmpFile(s_in->socket_no, fp);
 
-    m->send_cb_t.arg = &operatorFlag;
+        if(recv_status == 1){
+            zlog_info(log_all, "recv complete, now start to record the recv info and file info");
+            // 如果环形缓冲区满了，那么就要进行相应操作，此处丢弃缓冲区头部的文件
+            FileInfoPtr discard_file_info = NULL;
 
-    if(operatorFlag == 1){
-        zlog_info(log_all, "recv complete, send signal to send_thr");
+            // 收到的文件信息入队
+            FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(s_in->addr_in->sin_addr));
+            file_info_ptr->fp = fp;
 
-        FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(m->addr->sin_addr));
-        FileInfoPtr discard_file_info = NULL;
+            unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
+            // 如果队伍满了，输出丢弃文件的日志
+            if(err == RQ_ERR_BUFFER_FULL){
+                zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
 
-        unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
+                zlog_error(log_discard_file, "============== the file is discard ==============");
+                zlog_error(log_discard_file, "fileName: %s", discard_file_info->file_name);
+                zlog_error(log_discard_file, "time: %ld", discard_file_info->time);
+                zlog_error(log_discard_file, "upload_flag: %c", discard_file_info->upload_flag);
+                zlog_error(log_discard_file, "src_ip: %s", discard_file_info->src_dev_ip);
+                zlog_error(log_discard_file, "save_path: %s", discard_file_info->save_path);
+                zlog_error(log_discard_file, "src_ip: %s", discard_file_info->src_dev_ip);
+                zlog_error(log_discard_file, "=================================================\n");
 
-        if(err == RQ_ERR_BUFFER_FULL){
-            zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
-            file_info_destory(discard_file_info);
+                file_info_destory(discard_file_info);
+            }
+
+            zlog_info(log_all, "the socket No: %d, the client addr: %s", s_in->socket_no, inet_ntoa(s_in->addr_in->sin_addr));
+
+            // 增加收数据的信号量
+            sem_post(&sem_recv_data.sem);
+        }else{
+            zlog_error(log_all, "the recv_status return error");
+            unlink(fileName);
+            fclose(fp);
         }
         
-        file_info_ptr->fp = fp;
-
-        zlog_info(log_all, "the socket No: %d, the client addr: %s", m->st, inet_ntoa(m->addr->sin_addr));
-
-        if(m->recv_cb_t.cb != NULL){
-            zlog_info(log_all, "start to call the serv_recv cb");
-            m->recv_cb_t.cb(m, m->recv_cb_t.arg);
-        }
-    }else{
-        unlink(fileName);
-        fclose(fp);
+        close(s_in->socket_no);
     }
-    
-    signal_RecvMode(m);
+}
 
-    pthread_mutex_unlock(&m->lock->m_lock);
-    
-    close(m->st);
-    return NULL;
+void pthread_init(void *data){
+    // 线程初始化
+    for(int i = 0; i < THREAD_LEN; i++){
+        if(pthread_create(&thr_send[i], NULL, send_thread, NULL) != 0){
+            zlog_error(log_all, "create thr_send[%d] failed !", i);
+        }
+
+        if(pthread_create(&thr_recv[i], NULL, recv_thread, NULL) != 0){
+            zlog_error(log_all, "create thr_recv[%d] failed !", i);
+        }
+        zlog_info(log_all, "the thr_send[%d] id: %p", i, &thr_send[i]);
+        zlog_info(log_all, "the thr_recv[%d] id: %p", i, &thr_recv[i]);
+    }
 }
 
 int main(int argc, char const *argv[]){
     LOG_FUN;
-
+    // 日志初始化
     log_init();
-
+    // 读取配置文档
     get_network_config("../conf/network.ini", conf_cb);
 
+    // 初始化信号量
+    if(-1 == sem_init(&sem_socket_accept.sem, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_socket_accept init fail!");
+    }
+    if(-1 == sem_init(&sem_recv_data.sem, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_recv_data init fail!");
+    }
+    if(-1 == sem_init(&sem_send_data.sem, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_send_data init fail!");
+    }
+    
+    // 队列初始化
     static ring_queue_t queueBuf[QUEUE_LEN];
-
     ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN);
     
+    // 线程初始化
+    int client_st;
+    pthread_init(&client_st);
+
+    // 服务器初始化
     int st = servInit(CONF.serv_init_ip, CONF.serv_init_port);
+    socklen_t sockaddr_Len = sizeof(struct sockaddr);
+
     while(1){
-        RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
-
-        // accept the client(block)
-        socklen_t client_addrLen = sizeof(struct sockaddr);
         struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-        memset(client_addr, 0, sizeof(struct sockaddr_in));
 
-        int client_st = accept(st, (struct sockaddr *)client_addr, &client_addrLen);
-
+        // *client_addr需要释放，储存客户端的
+        client_st = accept(st, (struct sockaddr *)client_addr, &sockaddr_Len);
         if(client_st == -1){
             zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
+            continue;
         } 
 
-        pthread_t thr_send, thr_recv;
+        zlog_info(log_all, "recv from %s", inet_ntoa(client_addr->sin_addr));
 
-        model->st = client_st;
-        model->addr = client_addr;
-        model->lock = test_lock();
+        struct socket_info *client_info = (struct socket_info *)malloc(sizeof(struct socket_info));
+        client_info->socket_no = client_st;
+        client_info->addr_in = client_addr;
 
-        if(model->lock == NULL){
-            zlog_error(log_all, "the model->lock is null");
-            close(client_st);
-            continue;
-        }else{
-            model->send_cb_t.cb = send_cb;
-            model->recv_cb_t.cb = recv_cb;
-
-            if(pthread_create(&thr_recv, NULL, serv_recv_thread, model) != 0){
-                zlog_error(log_all, "create thread failed !");
-            }
-
-            if(pthread_create(&thr_send, NULL, serv_send_thread, model) != 0){
-                zlog_error(log_all, "create thread failed !");
-            }
-
-            zlog_info(log_all, "the thr: 0x%x and 0x%x get the lock, the cnt: %d", (unsigned int)thr_recv, (unsigned int)thr_send, model->lock->lock_no);
-        }
+        // p信号量，并且储存信息
+        sem_socket_accept.data = (void *)client_info;
+        sem_post(&sem_socket_accept.sem);
     }
-    return 0;
 }

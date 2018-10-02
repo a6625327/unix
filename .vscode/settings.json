@@ -18,6 +18,7 @@
         "cstdlib": "c",
         "conf.h": "c",
         "common.h": "c",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "semaphore.h": "c"
     }
 }

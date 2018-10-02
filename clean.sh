@@ -11,8 +11,10 @@ else
         then
             rm -vf ${file}
         else
-            echo "echo '' > ${file}"
-            echo '' > ${file}
+            if [[ ${file} != *"discard_file_info.txt"* ]];then
+                echo "echo '' > ${file}"
+                echo '' > ${file}
+            fi
         fi
     done
 fi

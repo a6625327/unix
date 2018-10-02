@@ -18,7 +18,7 @@
 
 #define BUFF_SIZE 2048
 
-char recv_write_to_tmpFile(int sockt, FILE *fp, struct in_addr sin_addr);
+char recv_write_to_tmpFile(int sockt, FILE *fp);
 
 char serv_write_to_socket(int sockt, FILE *fp);
 

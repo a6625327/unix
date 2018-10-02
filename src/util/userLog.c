@@ -6,16 +6,16 @@ int log_init(){
     rc = zlog_init("../conf/zlog.conf");
 
     if (rc) {
-        printf("init failed\n");
+        printf("zlog init failed\n");
         return -1;
     }
 
     log_all = zlog_get_category("log_all");
     log_recv_test = zlog_get_category("log_recv_test");
     log_send_test = zlog_get_category("log_send_test");
+    log_discard_file = zlog_get_category("log_discard_file");
 
-    if (!log_all || !log_recv_test || !log_send_test) {
-
+    if (!log_all || !log_recv_test || !log_send_test || !log_discard_file) {
         printf("get category fail\n");
         zlog_fini();
         return -2;
@@ -24,6 +24,7 @@ int log_init(){
     zlog_info(log_all, "log_all init success");
     zlog_info(log_recv_test, "log_recv_test init success");
     zlog_info(log_send_test, "log_send_test init success");
+    zlog_info(log_discard_file, "log_send_test init success");
     
     return 0;
 }

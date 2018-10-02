@@ -1,6 +1,6 @@
 #include "rw.h"
 
-char recv_write_to_tmpFile(int socket, FILE *fp, struct in_addr sin_addr){
+char recv_write_to_tmpFile(int socket, FILE *fp){
     LOG_FUN;
 
     char buf[BUFF_SIZE] = {0};
@@ -9,12 +9,10 @@ char recv_write_to_tmpFile(int socket, FILE *fp, struct in_addr sin_addr){
     char operatorFlag = 0;
 
     int writeCnt = 0;
-    zlog_info(log_all, "the fp need to write: %p", fp);
+    zlog_info(log_all, "the socket: %d, the fp need to write: %p", socket, fp);
 
     while(1){
         flag = recv(socket, buf, sizeof(buf), 0);
-        // zlog_info(log_all, "recv Num: %d", flag);
-        // zlog_info(log_all, "recv buf\n: %s", buf);
 
         if(flag < sizeof(buf)){
             if(ferror(fp)){
