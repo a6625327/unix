@@ -5,12 +5,15 @@
 #   1）基本软件安装
 #   2）日志系统部署
 #   3）配置文档解析系统部署
+#   4）编译链接本程序
 #
 # 二、创建热点基本依赖环境部署
 #
 # ************************************************
 #
-# 一、 ------------------ 基本环境部署 -----------------
+# 本程序路径假定为： ～/project/unix
+#
+# 一、 ---------------- 基本环境部署 ---------------
 # 1）基本软件安装
 sudo apt-get update
 sudo apt-get install gcc g++ gdb cgdb make cmake git 
@@ -33,8 +36,21 @@ git clone https://github.com/ndevilla/iniparser.git
 cd iniparsers
 sudo make
 #
-#    然后将生成的动态库拷贝至本程序目录下的libs/iniparser即可
-cp 
+#    然后将生成的动态库拷贝至本程序目录下的libs/iniparser即可(编译链接本程序时，会执行脚本完成动态库的自动部署)
+cp libiniparser.so.1 ~/project/unix/libs/iniparser
+#    将src下的头文件拷贝至本程序头文件库中
+mkdir ~/project/unix/include/iniparser
+cp src/*.h ~/project/unix/include/iniparser
+#
+# -------------------------------------------------------------
+
+# 4）编译链接本程序
+cd ~/project/unix
+sh cmake.sh
+# 可执行程序会生成在bin文件夹下
+#
+# 如果需要清除编译链接生成的中间文件、日志文件、传输产生的缓存文件、可执行文件，则执行：
+bash clean.sh
 
 # 二、 ------------------ 创建热点基本依赖环境部署 -----------------
 # 1、安装 hostapd
@@ -127,8 +143,5 @@ sudo hostapd xx/xxx/hostapd.conf
     #控制支持加密数据的秘钥，CCMP比TKIP更强
     wpa_pairwise=CCMP
 # ==================================================
-
-
+#
 # --------------------------------------------------
-
-

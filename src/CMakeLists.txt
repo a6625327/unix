@@ -6,7 +6,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/util/ serv_src)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/lib
+    ${PROJECT_SOURCE_DIR}/include/iniparser
 )
 
 # message("the serv_src: " ${serv_src})
