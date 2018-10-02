@@ -17,6 +17,7 @@ void send_cb(void *recv_mode, void *arg){
     FileInfoPtr f_info;
     FILE *fp;
 
+
     int recv_ret = *(int *)(arg);
 
     int ret = clientInit(&st, CONF.dest_ip, CONF.dest_port);
@@ -165,7 +166,7 @@ int main(int argc, char const *argv[]){
     int st = servInit(CONF.serv_init_ip, CONF.serv_init_port);
     while(1){
         RecvModel *model = (RecvModel *)malloc(sizeof(RecvModel));
-        
+
         // accept the client(block)
         socklen_t client_addrLen = sizeof(struct sockaddr);
         struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
