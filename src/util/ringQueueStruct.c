@@ -143,15 +143,21 @@ ring_queue* RingQueueInit(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned
 *Note(s)       :
 *********************************************************************************************************
 */
+int cnt = 0;
+int discard_cnt = 0;
 
 unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr, ptr_ring_queue_t discard_data){
     argCheck(ptr_queue == 0x00, RQ_ERR_POINTER_NULL, 0x00);
+    cnt++;
+    zlog_info(log_all, "the QUEUE in Cnt: %d", cnt);
 
     if(ptr_queue->ring_buf_of_cnt >= ptr_queue->ring_buf_size){
         *perr = RQ_ERR_BUFFER_FULL;     
         
         if(option == RQ_OPTION_WHEN_FULL_DISCARD_FIRST){
             zlog_notice(log_all, "the discard ptr: %p", ptr_queue->ring_buf_in_ptr);
+            discard_cnt++;
+            zlog_info(log_all, "the discard_cnt Cnt: %d", discard_cnt);
 
             *discard_data = *ptr_queue->ring_buf_in_ptr;
             _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr); /* Wrap OUT pointer                          */  

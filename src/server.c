@@ -5,38 +5,32 @@
 #define QUEUE_LEN 5
 #endif // !QUEUE_LEN
 
-#ifndef THREAD_LEN
-#define THREAD_LEN 3
-#endif // !THREAD_LEN
+ring_queue queue_recv;
 
-ring_queue queue;
+/* 
+** sem_socket_accept： 有客户端请求时，增加该信号量
+** sem_recv_data: 从客户端来的数据接收完成后，增加改信号量
+** sem_send_data： 暂留信号量
+*/
+sem_t sem_socket_accept;
+sem_t sem_send_data;
+sem_t sem_recv_data;
 
-struct sem_info{
-    sem_t sem;
-    void *data;
-};
-struct sem_info sem_socket_accept;
-struct sem_info sem_send_data;
-struct sem_info sem_recv_data;
-
+// 该结构储存套接字id以及其地址信息
 struct socket_info{
     int socket_no;
     struct sockaddr_in *addr_in;
 };
 
-// struct pthread_info{
-//     pthread_t p_id;
-//     struct socket_info s_in;
-// };
-
 // 处理接受数据以及发送数据的线程，各三个
-pthread_t thr_send[THREAD_LEN];
-pthread_t thr_recv[THREAD_LEN];
+pthread_t thr_send[MAX_THREAD_COUNT];
+pthread_t thr_recv[MAX_THREAD_COUNT];
 
+int send_cnt = 0;
 void *send_thread(void *arg){
     LOG_FUN;
     while(1){
-        sem_wait(&sem_recv_data.sem);
+        sem_wait(&sem_recv_data);
 
         // struct socket_info *s_in = arg;
         FileInfoPtr f_info;
@@ -53,7 +47,7 @@ void *send_thread(void *arg){
             continue;
         }else{
             // I can add the lock in the c src file
-            ring_queue_out_with_lock(&queue, (ptr_ring_queue_t)&f_info);
+            ring_queue_out_with_lock(&queue_recv, (ptr_ring_queue_t)&f_info);
 
             zlog_info(log_all, "clien's socket No: %d", st);
 
@@ -62,17 +56,15 @@ void *send_thread(void *arg){
                 zlog_error(log_all, "send error, ret: %d; Error Msg: %s", writeRet, strerror(errno));
             }
 
-            zlog_info(log_all, "FileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
-
             if(writeRet == -1){
                 fclose(fp);
             }else{
+                zlog_info(log_all, "FileName: %s; File ptr: %p send SUCCESS!" , f_info->file_name, f_info->fp);
                 zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
                 file_info_destory(f_info);
             }
-            
-            zlog_info(log_all, "clien's socket No: %d", st);
-
+            send_cnt++;
+            zlog_info(log_all, "the serv send cnt: %d", send_cnt);
         }
         close(st);
     }
@@ -80,48 +72,56 @@ void *send_thread(void *arg){
 
 void *recv_thread(void *arg){
     LOG_FUN;
-    char fileName[] = "tmpFile_XXXXXX";
-
     // pthread_detach(pthread_self());
     while(1){
-        sem_wait(&sem_socket_accept.sem);
+        sem_wait(&sem_socket_accept);
 
-        struct socket_info *s_in = sem_socket_accept.data;
+        char fileName[] = "tmpFile_XXXXXX";
+
+        struct thread_lock *data_locked = get_pending_lock();
+        if(data_locked == NULL){
+            zlog_error(log_all, "there is no pending lock, may something happended");
+        }
+
+        struct socket_info *s_in = data_locked->data;
+
+        zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
+        zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->use_flag);
 
         int fd;
-        if((fd = mkstemp(fileName))==-1){   
-            zlog_error(log_all, "Creat temp file faile");
-            return NULL;
+        if((fd = mkstemp(fileName)) == -1){   
+            zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
+            continue;
         }
 
         FILE *fp = fdopen(fd, "wb+");
 
         char recv_status = 0;
-        // confilct opera
         recv_status = recv_write_to_tmpFile(s_in->socket_no, fp);
 
         if(recv_status == 1){
-            zlog_info(log_all, "recv complete, now start to record the recv info and file info");
             // 如果环形缓冲区满了，那么就要进行相应操作，此处丢弃缓冲区头部的文件
             FileInfoPtr discard_file_info = NULL;
 
             // 收到的文件信息入队
+            zlog_info(log_all, "FILE_NAME: %s", fileName);
+            zlog_info(log_all, "ip addr: %s", inet_ntoa(s_in->addr_in->sin_addr));
+            
             FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(s_in->addr_in->sin_addr));
             file_info_ptr->fp = fp;
 
-            unsigned char err = ring_queue_in_with_lock(&queue, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
+            unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
             // 如果队伍满了，输出丢弃文件的日志
             if(err == RQ_ERR_BUFFER_FULL){
                 zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
 
-                zlog_error(log_discard_file, "============== the file is discard ==============");
+                zlog_error(log_discard_file, "============== the file that is discard: ==============");
                 zlog_error(log_discard_file, "fileName: %s", discard_file_info->file_name);
                 zlog_error(log_discard_file, "time: %ld", discard_file_info->time);
                 zlog_error(log_discard_file, "upload_flag: %c", discard_file_info->upload_flag);
                 zlog_error(log_discard_file, "src_ip: %s", discard_file_info->src_dev_ip);
                 zlog_error(log_discard_file, "save_path: %s", discard_file_info->save_path);
-                zlog_error(log_discard_file, "src_ip: %s", discard_file_info->src_dev_ip);
-                zlog_error(log_discard_file, "=================================================\n");
+                zlog_error(log_discard_file, "=======================================================\n");
 
                 file_info_destory(discard_file_info);
             }
@@ -129,7 +129,7 @@ void *recv_thread(void *arg){
             zlog_info(log_all, "the socket No: %d, the client addr: %s", s_in->socket_no, inet_ntoa(s_in->addr_in->sin_addr));
 
             // 增加收数据的信号量
-            sem_post(&sem_recv_data.sem);
+            sem_post(&sem_recv_data);
         }else{
             zlog_error(log_all, "the recv_status return error");
             unlink(fileName);
@@ -137,12 +137,17 @@ void *recv_thread(void *arg){
         }
         
         close(s_in->socket_no);
+        
+        free(s_in->addr_in);
+        free(s_in);
+
+        unset_lock_used_flag(data_locked);
     }
 }
 
 void pthread_init(void *data){
     // 线程初始化
-    for(int i = 0; i < THREAD_LEN; i++){
+    for(int i = 0; i < MAX_THREAD_COUNT; i++){
         if(pthread_create(&thr_send[i], NULL, send_thread, NULL) != 0){
             zlog_error(log_all, "create thr_send[%d] failed !", i);
         }
@@ -150,8 +155,8 @@ void pthread_init(void *data){
         if(pthread_create(&thr_recv[i], NULL, recv_thread, NULL) != 0){
             zlog_error(log_all, "create thr_recv[%d] failed !", i);
         }
-        zlog_info(log_all, "the thr_send[%d] id: %p", i, &thr_send[i]);
-        zlog_info(log_all, "the thr_recv[%d] id: %p", i, &thr_recv[i]);
+        // zlog_info(log_all, "the thr_send[%d] id: %p", i, &thr_send[i]);
+        // zlog_info(log_all, "the thr_recv[%d] id: %p", i, &thr_recv[i]);
     }
 }
 
@@ -163,19 +168,19 @@ int main(int argc, char const *argv[]){
     get_network_config("../conf/network.ini", conf_cb);
 
     // 初始化信号量
-    if(-1 == sem_init(&sem_socket_accept.sem, 0, 0)){
+    if(-1 == sem_init(&sem_socket_accept, 0, 0)){
         zlog_error(log_all, "Semaphore sem_socket_accept init fail!");
     }
-    if(-1 == sem_init(&sem_recv_data.sem, 0, 0)){
+    if(-1 == sem_init(&sem_recv_data, 0, 0)){
         zlog_error(log_all, "Semaphore sem_recv_data init fail!");
     }
-    if(-1 == sem_init(&sem_send_data.sem, 0, 0)){
+    if(-1 == sem_init(&sem_send_data, 0, 0)){
         zlog_error(log_all, "Semaphore sem_send_data init fail!");
     }
     
     // 队列初始化
-    static ring_queue_t queueBuf[QUEUE_LEN];
-    ring_queue_init_with_lock(&queue, queueBuf, QUEUE_LEN);
+    static ring_queue_t queue_recv_buf[QUEUE_LEN];
+    ring_queue_init_with_lock(&queue_recv, queue_recv_buf, QUEUE_LEN);
     
     // 线程初始化
     int client_st;
@@ -185,13 +190,22 @@ int main(int argc, char const *argv[]){
     int st = servInit(CONF.serv_init_ip, CONF.serv_init_port);
     socklen_t sockaddr_Len = sizeof(struct sockaddr);
 
+    if(st == -1){
+        zlog_error(log_all, "servInit() error happend");
+        exit(-1);
+    }
+
+    int no_free_lock_cnt = 0;
+    int refuse_cnt = 0;
+
     while(1){
         struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
 
-        // *client_addr需要释放，储存客户端的
         client_st = accept(st, (struct sockaddr *)client_addr, &sockaddr_Len);
         if(client_st == -1){
             zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
+            refuse_cnt++;
+            zlog_info(log_all, "serv refuse cnt: %d", refuse_cnt);
             continue;
         } 
 
@@ -202,7 +216,19 @@ int main(int argc, char const *argv[]){
         client_info->addr_in = client_addr;
 
         // p信号量，并且储存信息
-        sem_socket_accept.data = (void *)client_info;
-        sem_post(&sem_socket_accept.sem);
+        struct thread_lock *data_locked = test_free_lock();
+        if(data_locked == NULL){
+            zlog_info(log_all, "all data array is using");
+            close(client_st);
+            no_free_lock_cnt++;
+            zlog_info(log_all, "serv no_free_lock cnt: %d", no_free_lock_cnt);
+
+            continue;
+        }
+        
+        data_locked->data = (void *)client_info;
+
+        set_lock_pending_flag(data_locked);
+        sem_post(&sem_socket_accept);
     }
 }

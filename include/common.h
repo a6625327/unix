@@ -50,10 +50,7 @@ int clientInit(int *ct, const char *ipaddr, const int port){
     if(ret < 0){
         zlog_error(log_all, "clietn init fail, errorMsg: %s", strerror(errno));
         zlog_info(log_all, "close socket No: %d", *ct);
-
         close(*ct);
-
-        zlog_info(log_all, "now the *ct: %d", *ct);
     }
     return ret;
 };
@@ -77,7 +74,7 @@ int servInit(const char *ipaddr, const int port){
     int on = 1;
     if(setsockopt(st, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
         zlog_error(log_all, " faset sockpotiled ! error message %s", strerror(errno));
-        goto END;
+        return -1;
     }
 
     struct sockaddr_in addr;
@@ -94,16 +91,14 @@ int servInit(const char *ipaddr, const int port){
 
     if(bind(st, (struct sockaddr *) &addr, sizeof(addr)) == -1){
         zlog_error(log_all, "bind ip failed ! error message :%s", strerror(errno));
-        goto END;
+        return -1;
     }
-
 
     if(listen(st, 1) == -1){
         zlog_error(log_all, "listen failed ! error message :%s", strerror(errno));
-        goto END;
+        return -1;
     }
-
-END: 
+    
     return st;
 }
 

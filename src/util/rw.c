@@ -55,8 +55,24 @@ char serv_write_to_socket(int st, FILE *fp){
 
     char buf[BUFF_SIZE] = {0};
     
-    while((send_len = fread(buf, 1, sizeof(char), fp)) && send_ret){
+    // 重置文件指针至文件头部
+    if(fseek(fp, 0, SEEK_SET) == -1){
+        zlog_error(log_all, "fseek fail, error msg: %s", strerror(errno));
+        return -2;
+    }    
+
+    while((send_len = fread(buf, 1, BUFF_SIZE, fp)) && send_ret){
+        if(send_len < BUFF_SIZE){
+            if(ferror(fp)){
+                zlog_error(log_all, "fread error, msg: %s", strerror(errno));
+            }
+            if(feof(fp)){
+                zlog_info(log_all, "fread encounter end!");
+            }
+        }
         send_ret = send(st, buf, send_len, 0);
+        
+        zlog_info(log_all, "serv send cnt: %d, send content:[[%s]]", send_ret, buf);
     }
 
     zlog_info(log_all, "serv serv_send_thread()  send() success!");
