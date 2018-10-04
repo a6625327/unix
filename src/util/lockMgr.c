@@ -14,11 +14,11 @@ pthread_mutex_t struct_lock = PTHREAD_MUTEX_INITIALIZER;
 struct thread_lock t_lock[MAX_THREAD_COUNT] = {
     {
         0, PTHREAD_MUTEX_INITIALIZER, 0, NULL
-    },
-    {
+    }
+    ,{
         0, PTHREAD_MUTEX_INITIALIZER, 1, NULL
-    },
-    {
+    }
+    ,{
         0, PTHREAD_MUTEX_INITIALIZER, 2, NULL
     }
 };

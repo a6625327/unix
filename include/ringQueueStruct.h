@@ -14,6 +14,7 @@
 // for pthread
 #include <pthread.h>
 
+#include <unistd.h>
 /*
 ********************************************************************************************
 *                                   MISCELLANEOUS

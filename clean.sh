@@ -21,6 +21,7 @@ fi
 
 # 删除可执行文件下的缓存文件
 rm -rv bin/tmp*
+rm -rv bin/core
 
 cd build
 make clean

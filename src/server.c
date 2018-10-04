@@ -48,7 +48,8 @@ void *send_thread(void *arg){
         }else{
             // I can add the lock in the c src file
             ring_queue_out_with_lock(&queue_recv, (ptr_ring_queue_t)&f_info);
-
+            zlog_info(log_all, "QUEUE out data:%s -- %s", f_info->file_name, f_info->src_dev_ip);
+            
             zlog_info(log_all, "clien's socket No: %d", st);
 
             int writeRet;
@@ -111,6 +112,8 @@ void *recv_thread(void *arg){
             file_info_ptr->fp = fp;
 
             unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
+            zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, inet_ntoa(s_in->addr_in->sin_addr));
+
             // 如果队伍满了，输出丢弃文件的日志
             if(err == RQ_ERR_BUFFER_FULL){
                 zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
@@ -124,12 +127,10 @@ void *recv_thread(void *arg){
                 zlog_error(log_discard_file, "=======================================================\n");
 
                 file_info_destory(discard_file_info);
+            }else{
+                // 增加收数据的信号量
+                sem_post(&sem_recv_data);
             }
-
-            zlog_info(log_all, "the socket No: %d, the client addr: %s", s_in->socket_no, inet_ntoa(s_in->addr_in->sin_addr));
-
-            // 增加收数据的信号量
-            sem_post(&sem_recv_data);
         }else{
             zlog_error(log_all, "the recv_status return error");
             unlink(fileName);

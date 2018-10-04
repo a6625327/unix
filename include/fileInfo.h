@@ -19,9 +19,6 @@ typedef FileInfo* FileInfoPtr;
 
 FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
     LOG_FUN;
-
-    zlog_info(log_all, "%s from %s is saving....", fileName, src_ip);
-
     FileInfoPtr p = (FileInfoPtr)malloc(sizeof(FileInfo));
 
     char path_buf[128] = {0};

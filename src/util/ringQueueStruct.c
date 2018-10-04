@@ -196,20 +196,22 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
 *Note(s):
 *********************************************************************************************************
 */
-
+int ring_out_cnt = 0;
 ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr){
     ring_queue_t data;
     argCheck(ptr_queue == 0x00, RQ_ERR_POINTER_NULL,0x00);
     if(ptr_queue->ring_buf_of_cnt == 0){
         zlog_notice(log_all, "the queue is empty");
-
-        *perr = RQ_ERR_BUFFER_EMPTY;        
+        *perr = RQ_ERR_BUFFER_EMPTY; 
         return 0;
     }
     ptr_queue->ring_buf_of_cnt--;                                      /*  decrement character count           */  
     data = *ptr_queue->ring_buf_out_ptr;                      /* Get character from buffer                */  
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr);        /* Wrap OUT pointer                          */  
     *perr = RQ_ERR_NONE;
+
+    ring_out_cnt++;
+    zlog_info(log_all, "the QUEUE out Cnt: %d", ring_out_cnt);
 
     return data;
 }
