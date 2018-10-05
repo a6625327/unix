@@ -11,17 +11,28 @@ pthread_mutex_t struct_lock = PTHREAD_MUTEX_INITIALIZER;
 **          2： 数据已经存进数据锁，未被处理，悬挂中
 **          3： 数据正在被处理
 */
-struct thread_lock t_lock[MAX_THREAD_COUNT] = {
-    {
-        0, PTHREAD_MUTEX_INITIALIZER, 0, NULL
+struct thread_lock t_lock[LOCK_NUM];
+// struct thread_lock t_lock[MAX_THREAD_COUNT] = {
+//     {
+//         0, PTHREAD_MUTEX_INITIALIZER, 0, NULL
+//     }
+//     ,{
+//         0, PTHREAD_MUTEX_INITIALIZER, 1, NULL
+//     }
+//     ,{
+//         0, PTHREAD_MUTEX_INITIALIZER, 2, NULL
+//     }
+// };
+
+void thread_lock_init(){
+    int i = 0;
+    for(; i < LOCK_NUM; i++){
+        t_lock[i].use_flag = 0;
+        pthread_mutex_init(&t_lock[i].m_lock, NULL);
+        t_lock[i].lock_no = i;
+        t_lock[i].data = NULL;
     }
-    ,{
-        0, PTHREAD_MUTEX_INITIALIZER, 1, NULL
-    }
-    ,{
-        0, PTHREAD_MUTEX_INITIALIZER, 2, NULL
-    }
-};
+}
 
 struct thread_lock* test_free_lock(){
     LOG_FUN;
@@ -29,7 +40,7 @@ struct thread_lock* test_free_lock(){
     pthread_mutex_lock(&struct_lock);
     
     unsigned char cnt = 0;
-    while(cnt < MAX_THREAD_COUNT){
+    while(cnt < LOCK_NUM){
 
         if(t_lock[cnt].use_flag == 0){
             zlog_info(log_all, "the cnt: %d is free", cnt);
@@ -53,7 +64,7 @@ struct thread_lock* get_pending_lock(){
     pthread_mutex_lock(&struct_lock);
     
     unsigned char cnt = 0;
-    while(cnt < MAX_THREAD_COUNT){
+    while(cnt < LOCK_NUM){
 
         if(t_lock[cnt].use_flag == 2){
             zlog_info(log_all, "the cnt: %d is unservered", cnt);

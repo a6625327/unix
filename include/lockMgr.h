@@ -7,6 +7,9 @@
 #include <stdio.h>
 
 #define MAX_THREAD_COUNT 3
+#define LOCK_NUM 5
+
+void thread_lock_init();
 
 struct thread_lock* test_free_lock();
 

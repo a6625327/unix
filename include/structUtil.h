@@ -26,7 +26,7 @@ typedef struct cb_struct{
 struct thread_lock{
     char use_flag;
     pthread_mutex_t m_lock; 
-    const unsigned char lock_no;
+    unsigned char lock_no;
     void *data;
 };
 

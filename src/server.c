@@ -2,7 +2,7 @@
 // 思路：收和发必须独立出一个函数
 
 #ifndef QUEUE_LEN
-#define QUEUE_LEN 5
+#define QUEUE_LEN 15
 #endif // !QUEUE_LEN
 
 ring_queue queue_recv;
@@ -168,6 +168,9 @@ int main(int argc, char const *argv[]){
     // 读取配置文档
     get_network_config("../conf/network.ini", conf_cb);
 
+    // 线程共享数据的数据锁初始化；
+    thread_lock_init();
+    
     // 初始化信号量
     if(-1 == sem_init(&sem_socket_accept, 0, 0)){
         zlog_error(log_all, "Semaphore sem_socket_accept init fail!");
