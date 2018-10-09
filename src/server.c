@@ -5,26 +5,54 @@
 #define QUEUE_LEN 15
 #endif // !QUEUE_LEN
 
+/*========== 函数声明 =================*/
+void discard_file(FileInfoPtr discard_file_info);
+void user_sem_init();
+
+/*========== 全局变量 =================*/
 ring_queue queue_recv;
 
 /* 
 ** sem_socket_accept： 有客户端请求时，增加该信号量
-** sem_recv_data: 从客户端来的数据接收完成后，增加改信号量
-** sem_send_data： 暂留信号量
+** sem_recv_data:      从客户端来的数据接收完成后，增加改信号量
+** sem_send_data：     暂留信号量
 */
 sem_t sem_socket_accept;
 sem_t sem_send_data;
 sem_t sem_recv_data;
 
+// 处理接受数据以及发送数据的线程，各三个
+pthread_t thr_send[MAX_THREAD_COUNT];
+pthread_t thr_recv[MAX_THREAD_COUNT];
+
+/*========== 结构体声明 =================*/
 // 该结构储存套接字id以及其地址信息
 struct socket_info{
     int socket_no;
     struct sockaddr_in *addr_in;
 };
 
-// 处理接受数据以及发送数据的线程，各三个
-pthread_t thr_send[MAX_THREAD_COUNT];
-pthread_t thr_recv[MAX_THREAD_COUNT];
+/*========== 函数具体实现 =================*/
+/*****************************************************************************
+ 函数描述  :  打印、记录被丢弃文件的信息，信息内容包括：文件名、创建文件的时间、文件
+             上传时间、文件来源ip、文件存储路径 
+ 输入参数  :  
+              discard_file_info: FileInfoPtr, 文件信息结构体指针
+ 返回值    :  void
+*****************************************************************************/
+void discard_file(FileInfoPtr discard_file_info){
+    zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
+
+    zlog_error(log_discard_file, "============== the file that is discard: ==============");
+    zlog_error(log_discard_file, "fileName: %s", discard_file_info->file_name);
+    zlog_error(log_discard_file, "time: %ld", discard_file_info->time);
+    zlog_error(log_discard_file, "upload_flag: %c", discard_file_info->upload_flag);
+    zlog_error(log_discard_file, "src_ip: %s", discard_file_info->src_dev_ip);
+    zlog_error(log_discard_file, "save_path: %s", discard_file_info->save_path);
+    zlog_error(log_discard_file, "=======================================================\n");
+
+    file_info_destory(discard_file_info);
+}
 
 int send_cnt = 0;
 void *send_thread(void *arg){
@@ -41,9 +69,6 @@ void *send_thread(void *arg){
 
         if(ret < 0){
             zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
-            continue;
-        }else if(ret == -1){
-            zlog_error(log_all, "the recv write to fail FAIL, the ret: %d", ret);
             continue;
         }else{
             // I can add the lock in the c src file
@@ -114,19 +139,9 @@ void *recv_thread(void *arg){
             unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
             zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, inet_ntoa(s_in->addr_in->sin_addr));
 
-            // 如果队伍满了，输出丢弃文件的日志
             if(err == RQ_ERR_BUFFER_FULL){
-                zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
-
-                zlog_error(log_discard_file, "============== the file that is discard: ==============");
-                zlog_error(log_discard_file, "fileName: %s", discard_file_info->file_name);
-                zlog_error(log_discard_file, "time: %ld", discard_file_info->time);
-                zlog_error(log_discard_file, "upload_flag: %c", discard_file_info->upload_flag);
-                zlog_error(log_discard_file, "src_ip: %s", discard_file_info->src_dev_ip);
-                zlog_error(log_discard_file, "save_path: %s", discard_file_info->save_path);
-                zlog_error(log_discard_file, "=======================================================\n");
-
-                file_info_destory(discard_file_info);
+                // 如果队伍满了，输出丢弃文件的日志
+                discard_file(discard_file_info);
             }else{
                 // 增加收数据的信号量
                 sem_post(&sem_recv_data);
@@ -146,18 +161,43 @@ void *recv_thread(void *arg){
     }
 }
 
+/*****************************************************************************
+ 函数描述  :  线程初始化，分别初始化 MAX_THREAD_COUNT 个收文件、发送文件线程
+ 输入参数  :  
+              data: 线程执行时所使用的参数
+ 返回值    :  void
+*****************************************************************************/
 void pthread_init(void *data){
     // 线程初始化
     for(int i = 0; i < MAX_THREAD_COUNT; i++){
-        if(pthread_create(&thr_send[i], NULL, send_thread, NULL) != 0){
+        if(pthread_create(&thr_send[i], NULL, send_thread, data) != 0){
             zlog_error(log_all, "create thr_send[%d] failed !", i);
         }
 
-        if(pthread_create(&thr_recv[i], NULL, recv_thread, NULL) != 0){
+        if(pthread_create(&thr_recv[i], NULL, recv_thread, data) != 0){
             zlog_error(log_all, "create thr_recv[%d] failed !", i);
         }
-        // zlog_info(log_all, "the thr_send[%d] id: %p", i, &thr_send[i]);
-        // zlog_info(log_all, "the thr_recv[%d] id: %p", i, &thr_recv[i]);
+    }
+}
+
+/*****************************************************************************
+ 函数描述  :  本源文件所用的内部信号量初始化
+ 输入参数  :  无
+ 返回值    :  void
+*****************************************************************************/
+void user_sem_init(){
+    // 初始化信号量
+    if(-1 == sem_init(&sem_socket_accept, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_socket_accept init fail!");
+        exit(-1);
+    }
+    if(-1 == sem_init(&sem_recv_data, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_recv_data init fail!");
+        exit(-1);
+    }
+    if(-1 == sem_init(&sem_send_data, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_send_data init fail!");
+        exit(-1);
     }
 }
 
@@ -172,15 +212,7 @@ int main(int argc, char const *argv[]){
     thread_lock_init();
     
     // 初始化信号量
-    if(-1 == sem_init(&sem_socket_accept, 0, 0)){
-        zlog_error(log_all, "Semaphore sem_socket_accept init fail!");
-    }
-    if(-1 == sem_init(&sem_recv_data, 0, 0)){
-        zlog_error(log_all, "Semaphore sem_recv_data init fail!");
-    }
-    if(-1 == sem_init(&sem_send_data, 0, 0)){
-        zlog_error(log_all, "Semaphore sem_send_data init fail!");
-    }
+    user_sem_init();
     
     // 队列初始化
     static ring_queue_t queue_recv_buf[QUEUE_LEN];
@@ -220,13 +252,12 @@ int main(int argc, char const *argv[]){
         client_info->addr_in = client_addr;
 
         // p信号量，并且储存信息
-        struct thread_lock *data_locked = test_free_lock();
+        struct thread_lock *data_locked = get_free_lock();
         if(data_locked == NULL){
             zlog_info(log_all, "all data array is using");
             close(client_st);
             no_free_lock_cnt++;
             zlog_info(log_all, "serv no_free_lock cnt: %d", no_free_lock_cnt);
-
             continue;
         }
         

@@ -1,9 +1,17 @@
 #include "userLog.h"
 
-int log_init(){
+/*****************************************************************************
+ 函数描述  :  日志系统初始化 
+ 输入参数  :  
+              path: char *, 日志配置文件路径
+ 返回值    :  void
+*****************************************************************************/
+int log_init(const char *path){
     int rc;
 
-    rc = zlog_init("../conf/zlog.conf");
+    rc = zlog_init(path);
+
+    // rc = zlog_init("../conf/zlog.conf");
 
     if (rc) {
         printf("zlog init failed\n");
