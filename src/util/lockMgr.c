@@ -13,6 +13,11 @@ pthread_mutex_t struct_lock = PTHREAD_MUTEX_INITIALIZER;
 */
 struct thread_lock t_lock[LOCK_NUM];
 
+/*****************************************************************************
+ 函数描述  :  数据现场锁初始化
+ 输入参数  :  无
+ 返回值    :  void
+*****************************************************************************/
 void thread_lock_init(){
     int i = 0;
     for(; i < LOCK_NUM; i++){
@@ -23,7 +28,12 @@ void thread_lock_init(){
     }
 }
 
-struct thread_lock* test_free_lock(){
+/*****************************************************************************
+ 函数描述  :  获取目前未使用的数据锁
+ 输入参数  :  无
+ 返回值    :  struct thread_lock *
+*****************************************************************************/
+struct thread_lock* get_free_lock(){
     LOG_FUN;
 
     pthread_mutex_lock(&struct_lock);
@@ -47,6 +57,11 @@ struct thread_lock* test_free_lock(){
     return NULL;
 }
 
+/*****************************************************************************
+ 函数描述  :  获取目前有数据，但是数据仍未被处理的数据锁
+ 输入参数  :  无
+ 返回值    :  struct thread_lock *
+*****************************************************************************/
 struct thread_lock* get_pending_lock(){
     LOG_FUN;
 
@@ -70,6 +85,12 @@ struct thread_lock* get_pending_lock(){
     return NULL;
 }
 
+/*****************************************************************************
+ 函数描述  :  将线程锁的使用标志位置位，指明该锁正在使用中
+ 输入参数  :  
+             lock：struct thread_lock *，线程锁结构指针
+ 返回值    :  void
+*****************************************************************************/
 void set_lock_used_flag(struct thread_lock *lock){
     LOG_FUN;
 
@@ -82,6 +103,12 @@ void set_lock_used_flag(struct thread_lock *lock){
     pthread_mutex_unlock(&lock->m_lock);
 }
 
+/*****************************************************************************
+ 函数描述  :  将线程锁的数据未处理标志位置位，指明该锁所携带的数据仍未被处理
+ 输入参数  :  
+             lock：struct thread_lock *，线程锁结构指针
+ 返回值    :  void
+*****************************************************************************/
 void set_lock_pending_flag(struct thread_lock *lock){
     LOG_FUN;
 
@@ -94,6 +121,12 @@ void set_lock_pending_flag(struct thread_lock *lock){
     pthread_mutex_unlock(&lock->m_lock);
 }
 
+/*****************************************************************************
+ 函数描述  :  将线程锁的数据未处理标志位复位，指明该锁未被使用
+ 输入参数  :  
+             lock：struct thread_lock *，线程锁结构指针
+ 返回值    :  void
+*****************************************************************************/
 void unset_lock_used_flag(struct thread_lock *lock){
     LOG_FUN;
 
