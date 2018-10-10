@@ -204,7 +204,7 @@ void user_sem_init(){
 int main(int argc, char const *argv[]){
     LOG_FUN;
     // 日志初始化
-    log_init();
+    log_init("../conf/zlog.conf");
     // 读取配置文档
     get_network_config("../conf/network.ini", conf_cb);
 

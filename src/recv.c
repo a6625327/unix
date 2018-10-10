@@ -120,7 +120,7 @@ void recv_test(const char *ip, const int port){
 
 int main(int argc, char const *argv[])
 {
-    log_init();
+    log_init("../conf/zlog.conf");
     
     get_network_config("../conf/recv_test.ini", recv_test_conf_cb);
 
