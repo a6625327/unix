@@ -23,7 +23,8 @@
         "string.h": "c",
         "time.h": "c",
         "errno.h": "c",
-        "zlog.h": "c"
+        "zlog.h": "c",
+        "structutil.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }

@@ -12,17 +12,6 @@ pthread_mutex_t struct_lock = PTHREAD_MUTEX_INITIALIZER;
 **          3： 数据正在被处理
 */
 struct thread_lock t_lock[LOCK_NUM];
-// struct thread_lock t_lock[MAX_THREAD_COUNT] = {
-//     {
-//         0, PTHREAD_MUTEX_INITIALIZER, 0, NULL
-//     }
-//     ,{
-//         0, PTHREAD_MUTEX_INITIALIZER, 1, NULL
-//     }
-//     ,{
-//         0, PTHREAD_MUTEX_INITIALIZER, 2, NULL
-//     }
-// };
 
 void thread_lock_init(){
     int i = 0;
