@@ -12,11 +12,10 @@
 void thread_lock_init();
 
 struct thread_lock* get_free_lock();
+struct thread_lock* get_pending_lock();
 
 void set_lock_used_flag(struct thread_lock *lock);
 void set_lock_pending_flag(struct thread_lock *lock);
-
-struct thread_lock* get_pending_lock();
 
 void unset_lock_used_flag(struct thread_lock *lock);
 
