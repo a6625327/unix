@@ -14,10 +14,10 @@ void conf_cb(){
     CONF.serv_init_port = get_conf_int("serv_init:port", -1);
 
     zlog_info(log_all, "****CONF LIST START:****");
-    zlog_info(log_all, "    src:ip: %s", CONF.src_ip);
+    // zlog_info(log_all, "    src:ip: %s", CONF.src_ip);
     zlog_info(log_all, "    dest:ip: %s", CONF.dest_ip);
     zlog_info(log_all, "    serv_init:ip: %s", CONF.serv_init_ip);
-    zlog_info(log_all, "    src:port: %d", CONF.src_port);
+    // zlog_info(log_all, "    src:port: %d", CONF.src_port);
     zlog_info(log_all, "    dest:port: %d", CONF.dest_port);
     zlog_info(log_all, "    serv_init:port: %d", CONF.serv_init_port);
     zlog_info(log_all, "****CONF LIST EDN   ****");
