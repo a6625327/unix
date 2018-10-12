@@ -1,6 +1,7 @@
 #include "server.h"
 // 思路：收和发必须独立出一个函数
 
+// 收发文件队列长度
 #ifndef QUEUE_LEN
 #define QUEUE_LEN 15
 #endif // !QUEUE_LEN
