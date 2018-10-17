@@ -1,3 +1,13 @@
+<div>
+    struct str{
+        char a,
+        char b,
+        int c,
+        double d
+    }__attribute__((packet));
+</div>
+
+
 <body>
     <div ontouchmove="event.preventDefault()" class="forbidScrool">
         <div id="modelview"></div>
