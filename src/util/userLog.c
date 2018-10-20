@@ -24,7 +24,7 @@ int log_init(const char *path){
     log_discard_file = zlog_get_category("log_discard_file");
 
     if (!log_all || !log_recv_test || !log_send_test || !log_discard_file) {
-        printf("get category fail\n");
+        printf("get category fail, please check the config file\n");
         zlog_fini();
         return -2;
     }
