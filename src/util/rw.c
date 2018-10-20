@@ -10,7 +10,7 @@ char recv_write_to_tmpFile(int socket, FILE *fp){
 
     int writeCnt = 0;
     zlog_info(log_all, "the socket: %d, the fp need to write: %p", socket, fp);
-
+    
     while(1){
         flag = recv(socket, buf, sizeof(buf), 0);
 
@@ -38,6 +38,7 @@ char recv_write_to_tmpFile(int socket, FILE *fp){
             break;
         }
         zlog_info(log_all, "write Count: %d", writeCnt);
+        hzlog_info(log_all, buf, writeCnt);
     }
     fflush(fp);
 
@@ -72,7 +73,8 @@ char serv_write_to_socket(int st, FILE *fp){
         }
         send_ret = send(st, buf, send_len, 0);
         
-        zlog_info(log_all, "serv send cnt: %d, send content:[[%s]]", send_ret, buf);
+        zlog_info(log_all, "serv send cnt: %d", send_ret);
+        hzlog_info(log_all, buf, send_ret);
     }
 
     zlog_info(log_all, "serv serv_send_thread()  send() success!");
