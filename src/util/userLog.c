@@ -11,8 +11,6 @@ int log_init(const char *path){
 
     rc = zlog_init(path);
 
-    // rc = zlog_init("../conf/zlog.conf");
-
     if (rc) {
         printf("zlog init failed\n");
         return -1;
