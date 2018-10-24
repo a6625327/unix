@@ -7,7 +7,7 @@
     }__attribute__((packet));
 </div>
 
-
+ww
 <body>
     <div ontouchmove="event.preventDefault()" class="forbidScrool">
         <div id="modelview"></div>
@@ -15,7 +15,7 @@
         <!-- 地图 -->
         <div class="mapDiv">
             <img id="map" src="./img/map.png" alt="">
-            <span id="dot"></span>
+            <span id="dotwwwspan>
         </div>
     </div>
 </body>
