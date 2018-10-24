@@ -7,7 +7,6 @@
     }__attribute__((packet));
 </div>
 
-ww
 <body>
     <div ontouchmove="event.preventDefault()" class="forbidScrool">
         <div id="modelview"></div>
