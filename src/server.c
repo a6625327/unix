@@ -11,27 +11,23 @@ void discard_file(FileInfoPtr discard_file_info);
 void user_sem_init();
 
 /*========== 全局变量 =================*/
+zlog_category_t *log_all;
 ring_queue queue_recv;
 
 /* 
 ** sem_socket_accept： 有客户端请求时，增加该信号量
 ** sem_recv_data:      从客户端来的数据接收完成后，增加改信号量
+** sem_escaped_data:   从客户端来的数据接反转义完成后，增加改信号量
 ** sem_send_data：     暂留信号量
 */
 sem_t sem_socket_accept;
-sem_t sem_send_data;
 sem_t sem_recv_data;
+sem_t sem_escaped_data;
+sem_t sem_send_data;
 
 // 处理接受数据以及发送数据的线程，各三个
 pthread_t thr_send[MAX_THREAD_COUNT];
 pthread_t thr_recv[MAX_THREAD_COUNT];
-
-/*========== 结构体声明 =================*/
-// 该结构储存套接字id以及其地址信息
-struct socket_info{
-    int socket_no;
-    struct sockaddr_in *addr_in;
-};
 
 /*========== 函数具体实现 =================*/
 /*****************************************************************************
@@ -59,7 +55,7 @@ int send_cnt = 0;
 void *send_thread(void *arg){
     LOG_FUN;
     while(1){
-        sem_wait(&sem_recv_data);
+        sem_wait(&sem_escaped_data);
 
         // struct socket_info *s_in = arg;
         FileInfoPtr f_info;
@@ -102,6 +98,40 @@ void *recv_thread(void *arg){
     // pthread_detach(pthread_self());
     while(1){
         sem_wait(&sem_socket_accept);
+
+        char fileName[] = "tmpFile_XXXXXX";
+
+        struct thread_lock *data_locked = get_used_lock();
+        if(data_locked == NULL){
+            zlog_error(log_all, "there is no pending lock, may something happended");
+        }
+
+        struct socket_info *s_in = data_locked->data;
+
+        zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
+        zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->use_flag);
+
+        int fd;
+        if((fd = mkstemp(fileName)) == -1){   
+            zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
+            continue;
+        }
+
+        FILE *fp = fdopen(fd, "wb+");
+
+        char recv_status = 0;
+
+        recv_status = recv_write_to_tmpFile(s_in->socket_no, fp);
+        
+    }
+}
+
+
+void *handle_recv_data(void *arg){
+    LOG_FUN;
+    // pthread_detach(pthread_self());
+    while(1){
+        sem_wait(&sem_recv_data);
 
         char fileName[] = "tmpFile_XXXXXX";
 
@@ -155,12 +185,14 @@ void *recv_thread(void *arg){
         
         close(s_in->socket_no);
         
+        // 释放main函数中的资源
         free(s_in->addr_in);
         free(s_in);
 
         unset_lock_used_flag(data_locked);
     }
 }
+
 
 /*****************************************************************************
  函数描述  :  线程初始化，分别初始化 MAX_THREAD_COUNT 个收文件、发送文件线程
@@ -200,12 +232,17 @@ void user_sem_init(){
         zlog_error(log_all, "Semaphore sem_send_data init fail!");
         exit(-1);
     }
+    if(-1 == sem_init(&sem_escaped_data, 0, 0)){
+        zlog_error(log_all, "Semaphore sem_escaped_data init fail!");
+        exit(-1);
+    }
 }
 
 int main(int argc, char const *argv[]){
     LOG_FUN;
     // 日志初始化
-    log_init("../conf/zlog.conf");
+    log_init(&log_all, "log_all", "../conf/zlog.conf");
+
     // 读取配置文档
     get_network_config("../conf/network.ini", conf_cb);
 
@@ -236,6 +273,7 @@ int main(int argc, char const *argv[]){
     int refuse_cnt = 0;
 
     while(1){
+        // client_addr 需要free
         struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
 
         client_st = accept(st, (struct sockaddr *)client_addr, &sockaddr_Len);
@@ -248,12 +286,13 @@ int main(int argc, char const *argv[]){
 
         zlog_info(log_all, "recv from %s", inet_ntoa(client_addr->sin_addr));
 
+        // client_info 需要free
         struct socket_info *client_info = (struct socket_info *)malloc(sizeof(struct socket_info));
         client_info->socket_no = client_st;
         client_info->addr_in = client_addr;
 
         // p信号量，并且储存信息
-        struct thread_lock *data_locked = get_free_lock();
+        struct thread_lock *data_locked = get_unused_lock();
         if(data_locked == NULL){
             zlog_info(log_all, "all data array is using");
             close(client_st);
@@ -264,7 +303,7 @@ int main(int argc, char const *argv[]){
         
         data_locked->data = (void *)client_info;
 
-        set_lock_pending_flag(data_locked);
+        // set_lock_pending_flag(data_locked);
         sem_post(&sem_socket_accept);
     }
 }

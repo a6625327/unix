@@ -1,6 +1,7 @@
 #ifndef __RW_H__
 #define __RW_H__
 
+#include <semaphore.h>
 #include <sys/socket.h>
 
 // c stdlib
@@ -13,13 +14,22 @@
 // for strerror()
 #include <string.h>
 
+#include <bits/stdint-intn.h>
+#include <bits/stdint-uintn.h>
+
 // for log
 #include "userLog.h"
 
-#define BUFF_SIZE 2048
+#include "common.h"
+
+int8_t recv_from_socket_and_test_a_frame(int socket, sem_t *sem_escape_data);
 
 char recv_write_to_tmpFile(int sockt, FILE *fp);
 
 char serv_write_to_socket(int sockt, FILE *fp);
+
+size_t write_buff_to_socket(int st, uint8_t *buf, size_t len);
+
+size_t recv_buff_from_socket(int st, uint8_t *buf, size_t len);
 
 #endif // !__RW_H__

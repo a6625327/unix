@@ -37,7 +37,7 @@ extern "C" {
   @param    errback  Function to call.
 
   By default, the error will be printed on stderr. If a null pointer is passed
-  as errback the error callback will be switched back to default.
+  as errback the error callback will be escaped back to default.
  */
 /*--------------------------------------------------------------------------*/
 

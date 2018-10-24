@@ -4,13 +4,6 @@
 
 pthread_mutex_t struct_lock = PTHREAD_MUTEX_INITIALIZER; 
 
-/*
-** use_flag有4个值：
-**          0： 空闲的数据锁
-**          1： 已经被使用
-**          2： 数据已经存进数据锁，未被处理，悬挂中
-**          3： 数据正在被处理
-*/
 struct thread_lock t_lock[LOCK_NUM];
 
 /*****************************************************************************
@@ -21,7 +14,7 @@ struct thread_lock t_lock[LOCK_NUM];
 void thread_lock_init(){
     int i = 0;
     for(; i < LOCK_NUM; i++){
-        t_lock[i].use_flag = 0;
+        t_lock[i].flag = UNUSED;
         pthread_mutex_init(&t_lock[i].m_lock, NULL);
         t_lock[i].lock_no = i;
         t_lock[i].data = NULL;
@@ -33,7 +26,7 @@ void thread_lock_init(){
  输入参数  :  无
  返回值    :  struct thread_lock *
 *****************************************************************************/
-struct thread_lock* get_free_lock(){
+struct thread_lock* get_unused_lock(){
     LOG_FUN;
 
     pthread_mutex_lock(&struct_lock);
@@ -41,8 +34,8 @@ struct thread_lock* get_free_lock(){
     unsigned char cnt = 0;
     while(cnt < LOCK_NUM){
 
-        if(t_lock[cnt].use_flag == 0){
-            zlog_info(log_all, "the cnt: %d is free", cnt);
+        if(t_lock[cnt].flag == UNUSED){
+            zlog_info(log_cat, "the cnt: %d is free", cnt);
             set_lock_used_flag(&t_lock[cnt]);
             
             pthread_mutex_unlock(&struct_lock);
@@ -51,7 +44,34 @@ struct thread_lock* get_free_lock(){
             cnt++;
         }
     }
-    zlog_warn(log_all, "there is no free cnt");
+    zlog_warn(log_cat, "there is no free data lock");
+
+    pthread_mutex_unlock(&struct_lock);
+    return NULL;
+}
+
+/*****************************************************************************
+ 函数描述  :  获取目前已使用的、但是未经过任何处理的数据锁
+ 输入参数  :  无
+ 返回值    :  struct thread_lock *
+*****************************************************************************/
+struct thread_lock* get_used_lock(){
+    LOG_FUN;
+
+    pthread_mutex_lock(&struct_lock);
+    
+    unsigned char cnt = 0;
+    while(cnt < LOCK_NUM){
+
+        if(t_lock[cnt].flag == USED){
+            zlog_info(log_cat, "the cnt: %d is free", cnt);
+            pthread_mutex_unlock(&struct_lock);
+            return &t_lock[cnt];
+        }else{
+            cnt++;
+        }
+    }
+    zlog_warn(log_cat, "there is no free data lock");
 
     pthread_mutex_unlock(&struct_lock);
     return NULL;
@@ -70,16 +90,69 @@ struct thread_lock* get_pending_lock(){
     unsigned char cnt = 0;
     while(cnt < LOCK_NUM){
 
-        if(t_lock[cnt].use_flag == 2){
-            zlog_info(log_all, "the cnt: %d is unservered", cnt);
-            t_lock[cnt].use_flag = 3;
+        if(t_lock[cnt].flag == PENDING){
+            zlog_info(log_cat, "the cnt: %d is pending", cnt);
             pthread_mutex_unlock(&struct_lock);
             return &t_lock[cnt];
         }else{
             cnt++;
         }
     }
-    zlog_warn(log_all, "there is no unserver cnt");
+    zlog_warn(log_cat, "there is no pending data");
+
+    pthread_mutex_unlock(&struct_lock);
+    return NULL;
+}
+
+/*****************************************************************************
+ 函数描述  :  获取目前有数据，但是数据仍未被处理的数据锁
+ 输入参数  :  无
+ 返回值    :  struct thread_lock *
+*****************************************************************************/
+struct thread_lock* get_escaping_lock(){
+    LOG_FUN;
+
+    pthread_mutex_lock(&struct_lock);
+    
+    unsigned char cnt = 0;
+    while(cnt < LOCK_NUM){
+
+        if(t_lock[cnt].flag == ESCAPING){
+            zlog_info(log_cat, "the cnt: %d is need to escape", cnt);
+            pthread_mutex_unlock(&struct_lock);
+            return &t_lock[cnt];
+        }else{
+            cnt++;
+        }
+    }
+    zlog_warn(log_cat, "there is no data need to be escaped");
+
+    pthread_mutex_unlock(&struct_lock);
+    return NULL;
+}
+
+/*****************************************************************************
+ 函数描述  :  获取目前有数据，但是数据仍未被处理的数据锁
+ 输入参数  :  无
+ 返回值    :  struct thread_lock *
+*****************************************************************************/
+struct thread_lock* get_unsend_lock(){
+    LOG_FUN;
+
+    pthread_mutex_lock(&struct_lock);
+    
+    unsigned char cnt = 0;
+    while(cnt < LOCK_NUM){
+
+        if(t_lock[cnt].flag == UNSEND){
+            zlog_info(log_cat, "the cnt: %d is need to escape", cnt);
+            pthread_mutex_unlock(&struct_lock);
+            return &t_lock[cnt];
+        }else{
+            cnt++;
+        }
+    }
+    zlog_warn(log_cat, "there is no data need to be sended");
 
     pthread_mutex_unlock(&struct_lock);
     return NULL;
@@ -96,9 +169,9 @@ void set_lock_used_flag(struct thread_lock *lock){
 
     pthread_mutex_lock(&lock->m_lock);
 
-    zlog_info(log_all, "set the lock use flag, the Cnt: %d", lock->lock_no);
+    zlog_info(log_cat, "set the lock use flag, the Cnt: %d", lock->lock_no);
 
-    lock->use_flag = 1;
+    lock->flag = USED;
 
     pthread_mutex_unlock(&lock->m_lock);
 }
@@ -114,9 +187,45 @@ void set_lock_pending_flag(struct thread_lock *lock){
 
     pthread_mutex_lock(&lock->m_lock);
 
-    zlog_info(log_all, "set the lock pending flag, the Cnt: %d", lock->lock_no);
+    zlog_info(log_cat, "set the lock pending flag, the Cnt: %d", lock->lock_no);
 
-    lock->use_flag = 2;
+    lock->flag = PENDING;
+
+    pthread_mutex_unlock(&lock->m_lock);
+}
+
+/*****************************************************************************
+ 函数描述  :  将线程锁的数据转义标志位置位，指明该锁所携带的数据仍正在被转义或者反转义
+ 输入参数  :  
+             lock：struct thread_lock *，线程锁结构指针
+ 返回值    :  void
+*****************************************************************************/
+void set_lock_escaping_flag(struct thread_lock *lock){
+    LOG_FUN;
+
+    pthread_mutex_lock(&lock->m_lock);
+
+    zlog_info(log_cat, "set the lock escape flag, the Cnt: %d", lock->lock_no);
+
+    lock->flag = ESCAPING;
+
+    pthread_mutex_unlock(&lock->m_lock);
+}
+
+/*****************************************************************************
+ 函数描述  :  将线程锁的数据传输标志位，指明该锁所携带的数据等待传输出去
+ 输入参数  :  
+             lock：struct thread_lock *，线程锁结构指针
+ 返回值    :  void
+*****************************************************************************/
+void set_lock_unsend_flag(struct thread_lock *lock){
+    LOG_FUN;
+
+    pthread_mutex_lock(&lock->m_lock);
+
+    zlog_info(log_cat, "set the lock unsend flag, the Cnt: %d", lock->lock_no);
+
+    lock->flag = UNSEND;
 
     pthread_mutex_unlock(&lock->m_lock);
 }
@@ -132,9 +241,9 @@ void unset_lock_used_flag(struct thread_lock *lock){
 
     pthread_mutex_lock(&lock->m_lock);
 
-    lock->use_flag = 0;
+    lock->flag = UNUSED;
 
-    zlog_info(log_all, "unset the lock flag, the Cnt: %d, now the flag: %d", lock->lock_no, lock->use_flag);
+    zlog_info(log_cat, "unset the lock flag, the Cnt: %d, now the flag: %d", lock->lock_no, lock->flag);
 
     pthread_mutex_unlock(&lock->m_lock);
 }

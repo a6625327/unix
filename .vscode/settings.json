@@ -24,7 +24,17 @@
         "time.h": "c",
         "errno.h": "c",
         "zlog.h": "c",
-        "structutil.h": "c"
+        "structutil.h": "c",
+        "switch.h": "c",
+        "types.h": "c",
+        "framehandle.h": "c",
+        "socket.h": "c",
+        "stdint-uintn.h": "c",
+        "stdint-intn.h": "c",
+        "escape.h": "c",
+        "inet.h": "c",
+        "in.h": "c"
     },
-    "C_Cpp.errorSquiggles": "Enabled"
+    "C_Cpp.errorSquiggles": "Enabled",
+    "C_Cpp.dimInactiveRegions": true
 }

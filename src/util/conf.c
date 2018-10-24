@@ -13,22 +13,22 @@ void conf_cb(){
     CONF.dest_port = get_conf_int("dest:port", -1);
     CONF.serv_init_port = get_conf_int("serv_init:port", -1);
 
-    zlog_info(log_all, "****CONF LIST START:****");
-    zlog_info(log_all, "    dest:ip: %s", CONF.dest_ip);
-    zlog_info(log_all, "    dest:port: %d", CONF.dest_port);
-    zlog_info(log_all, "    serv_init:ip: %s", CONF.serv_init_ip);
-    zlog_info(log_all, "    serv_init:port: %d", CONF.serv_init_port);
-    zlog_info(log_all, "****CONF LIST EDN   ****");
+    zlog_info(log_cat, "****CONF LIST START:****");
+    zlog_info(log_cat, "    dest:ip: %s", CONF.dest_ip);
+    zlog_info(log_cat, "    dest:port: %d", CONF.dest_port);
+    zlog_info(log_cat, "    serv_init:ip: %s", CONF.serv_init_ip);
+    zlog_info(log_cat, "    serv_init:port: %d", CONF.serv_init_port);
+    zlog_info(log_cat, "****CONF LIST EDN   ****");
 }
 
 void get_network_config(const char *cont_path, conf_cb_fn cb){
     int n = 0;
 
-    zlog_info(log_all, "start to init conf file");
+    zlog_info(log_cat, "start to init conf file");
 
     ini = iniparser_load(cont_path); //parser the file
     if(ini == NULL){
-        zlog_error(log_all, "can not open %s",cont_path);
+        zlog_error(log_cat, "can not open %s",cont_path);
         exit(EXIT_FAILURE);
     }
     

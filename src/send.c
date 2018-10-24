@@ -1,5 +1,9 @@
 #include "client.h"
 
+zlog_category_t *log_send_test;
+
+#define LOG_SEND_TEST
+
 struct send_struct{
     int port;
     const char *ip;
@@ -8,40 +12,38 @@ struct send_struct{
 
 struct send_struct CONF;
 
-#define BUFF_SIZE 2048
-
-/*****************************************************************************
- 函数名称  :  clientInit()
- 函数描述  :  client init 
- 输入参数  :  
-            ct: int, the socket uset to connect the serv
-            ipaddr: char *, serv ip address
-            port: int, the port of serv
- 返回值    :  int， 没任何错误返回0
-*****************************************************************************/
-int clientInit(int *ct, const char *ipaddr, const int port){
-    *ct = socket(AF_INET, SOCK_STREAM, 0);
+// /*****************************************************************************
+//  函数名称  :  clientInit()
+//  函数描述  :  client init 
+//  输入参数  :  
+//             ct: int, the socket uset to connect the serv
+//             ipaddr: char *, serv ip address
+//             port: int, the port of serv
+//  返回值    :  int， 没任何错误返回0
+// *****************************************************************************/
+// int clientInit(int *ct, const char *ipaddr, const int port){
+//     *ct = socket(AF_INET, SOCK_STREAM, 0);
     
-    // reuse the socket
-    int on = 1;
-    if(setsockopt(*ct, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
-        zlog_error(log_send_test, "faset sockpotiled ! error message %s", strerror(errno));
-    }
+//     // reuse the socket
+//     int on = 1;
+//     if(setsockopt(*ct, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
+//         zlog_error(log_send_test, "faset sockpotiled ! error message %s", strerror(errno));
+//     }
 
-    struct sockaddr_in s_addr;
+//     struct sockaddr_in s_addr;
 
-    s_addr.sin_family = AF_INET;
-    s_addr.sin_port = htons(port);
-    inet_pton(AF_INET, ipaddr, &s_addr.sin_addr.s_addr);
+//     s_addr.sin_family = AF_INET;
+//     s_addr.sin_port = htons(port);
+//     inet_pton(AF_INET, ipaddr, &s_addr.sin_addr.s_addr);
 
-    int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
-    if(ret < 0){
-        zlog_error(log_send_test, "clietn init fail, errorMsg: %s", strerror(errno));
-        zlog_info(log_send_test, "close socket No: %d", *ct);
-        close(*ct);
-    }
-    return ret;
-};
+//     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
+//     if(ret < 0){
+//         zlog_error(log_send_test, "clietn init fail, errorMsg: %s", strerror(errno));
+//         zlog_info(log_send_test, "close socket No: %d", *ct);
+//         close(*ct);
+//     }
+//     return ret;
+// };
 
 void sent_test_conf_cb(){
     CONF.ip = get_conf_string("send_test:ip", "null");
@@ -111,7 +113,7 @@ void send_test(const char *file_path, const char *ip, const int port){
 
 int main(int argc, char const *argv[])
 {   
-    log_init("../conf/zlog.conf");
+    log_init(&log_send_test, "log_send_test", "../conf/zlog.conf");
 
     get_network_config("../conf/send_test.ini", sent_test_conf_cb);
 

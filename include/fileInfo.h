@@ -19,6 +19,7 @@ typedef FileInfo* FileInfoPtr;
 
 FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
     LOG_FUN;
+    // p需要 free
     FileInfoPtr p = (FileInfoPtr)malloc(sizeof(FileInfo));
 
     char path_buf[128] = {0};

@@ -23,11 +23,6 @@ typedef struct cb_struct{
     void *arg;
 }CB_t;
 
-struct thread_lock{
-    char use_flag;
-    pthread_mutex_t m_lock; 
-    unsigned char lock_no;
-    void *data;
-};
+
 
 #endif // !__STRUCT_UTIL_H__
