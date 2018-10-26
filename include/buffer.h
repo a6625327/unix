@@ -2,14 +2,14 @@
 #define __BUFFER_H__
 
 #include "userLog.h"
+#include "common.h"
+
 #include <malloc.h>
 
 #include <string.h>
 #include <error.h>
 #include <errno.h>
 
-// #include <bits/stdint-intn.h>
-// #include <bits/stdint-uintn.h>
 #include <stdint.h>
 
 
@@ -17,6 +17,7 @@ typedef struct{
     void *buf;
     size_t capacity;
     size_t buf_num;
+    uint64_t No;
 }buff_t;
 
 buff_t *init_buffer(size_t buf_size);

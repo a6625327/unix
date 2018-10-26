@@ -121,5 +121,15 @@ uint8_t get_buff_from_file(FILE *fp, uint8_t *buf, uint16_t *file_size){
 }
 
 void free_buff_from_file(uint8_t *buf){
-    free(buf);
+    free_and_set_null(buf);
+}
+
+void free_and_set_null(void *__ptr){
+    free(__ptr);
+    __ptr = NULL;
+}
+
+void fclose_and_set_null(FILE *__straem){
+    fclose(__straem);
+    __straem = NULL;
 }

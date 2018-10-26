@@ -96,7 +96,7 @@ void *send_thread(void *arg){
             }
 
             if(writeRet == -1){
-                fclose(f_info->fp);
+                fclose_and_set_null(f_info->fp);
             }else{
                 zlog_info(log_all, "FileName: %s; File ptr: %p send SUCCESS!" , f_info->file_name, f_info->fp);
                 zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
@@ -158,13 +158,14 @@ void *handle_recv_data(void *arg){
         int8_t escape_ret = unescaper(buf->buf, buf->buf_num, (void *)&unescape_data, &unescape_data_len);
         if(escape_ret != 0){
             zlog_error(log_all, "unescaper error");
-            free_buffer(buf);
+            free_buffer(info->buf);
             continue;
         }
+        free_buffer(info->buf);
 
         frame_t recv_frame;
         switch_buff2frame_struct(unescape_data, unescape_data_len, &recv_frame);
-        free(unescape_data);
+        free_and_set_null(unescape_data);
 
         // 范文件传输
         if(recv_frame.type == 0xA3){
@@ -187,13 +188,12 @@ void *handle_recv_data(void *arg){
             size_t ret = fwrite(recv_frame.data, sizeof(uint8_t), recv_frame.data_len, fp);
             if(ret != recv_frame.data_len){
                 zlog_error(log_all, "handle_recv_data fwrite error, msg: %s", strerror(errno));
-                fclose(fp);
-                free(recv_frame.data);
+                fclose_and_set_null(fp);
+                free_and_set_null(recv_frame.data);
                 continue;
             }
             fflush(fp);
-            fclose(fp);
-            free(recv_frame.data);
+            free_and_set_null(recv_frame.data);
 
 
             // 收到的文件信息入队
@@ -217,8 +217,8 @@ void *handle_recv_data(void *arg){
             close(info->s_in->socket_no);
             
             // 释放main函数中的资源
-            free(info->s_in->addr_in);
-            free(info->s_in);
+            free_and_set_null(info->s_in->addr_in);
+            free_and_set_null(info->s_in);
         }
     }
 }

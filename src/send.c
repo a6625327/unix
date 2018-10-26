@@ -42,7 +42,7 @@ int8_t send_test(const char *file_path, const char *ip, const int port){
         int ret = clientInit(&ct, ip, port);
         if(ret < 0){
             zlog_error(log_send_test, "clietn init fail");
-            fclose(fp);
+            fclose_and_set_null(fp);
             continue;
         }
 
@@ -78,9 +78,9 @@ int8_t send_test(const char *file_path, const char *ip, const int port){
             zlog_error(log_send_test, "send_frame error");
         }
 
-        free(buf);
+        free_and_set_null(buf);
 
-        fclose(fp);
+        fclose_and_set_null(fp);
         close(ct);
     }
 }

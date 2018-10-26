@@ -38,7 +38,7 @@ typedef struct{
 }__attribute__((__packed__))frame_t ;
 
 typedef struct{
-    frame_t *frame;
+    // frame_t *frame;
     uint8_t head_flag;
     uint8_t tail_flag;
     buff_t *net_buff;

@@ -38,7 +38,8 @@
         "pthread.h": "c",
         "ctype.h": "c",
         "stdio.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "malloc.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled",
     "C_Cpp.dimInactiveRegions": true

@@ -87,12 +87,12 @@ int8_t send_frame(int st, frame_t *f){
     
 
     // 转换完成，释放资源
-    free(f_buf_origin);
+    free_and_set_null(f_buf_origin);
 
     write_buff_to_socket(st, f_buf_handled, ret_num);
     
     // 转换完成，释放资源
-    free(f_buf_handled);
+    free_and_set_null(f_buf_handled);
     return 0;
 }
 
@@ -137,9 +137,9 @@ int8_t recv_frame(int st, frame_t *f){
 
             switch_buff2frame_struct(f_buf_origin, f_origin_len, f);
             // 转换完成，释放资源
-            free(f_buf_origin);
+            free_and_set_null(f_buf_origin);
             // 转换完成，释放资源
-            free(f_buf_handled);
+            free_and_set_null(f_buf_handled);
         }else{
             break;
         }
@@ -154,14 +154,14 @@ int8_t recv_frame(int st, frame_t *f){
 net_frame_buff_t *init_net_frmae_buf(){
     // f_buf 需要 free
     net_frame_buff_t *f_buf = malloc(sizeof(net_frame_buff_t));
-    f_buf->frame = malloc(sizeof(frame_t));
+    // f_buf->frame = malloc(sizeof(frame_t));
 
     f_buf->net_buff = init_buffer(BUFF_SIZE);
     zlog_info(log_cat, "the buff_t addr: %p", f_buf->net_buff);
-    if(f_buf == NULL || f_buf->frame == NULL || f_buf->net_buff == NULL){
+    if(f_buf == NULL || f_buf->net_buff == NULL){
 		zlog_error(log_cat, "file_info_init malloc error, error msg: %s", strerror(errno));
     }
-    set_all_zero_frame(f_buf->frame);
+    // set_all_zero_frame(f_buf->frame);
     f_buf->head_flag = 0;
     f_buf->tail_flag = 0;
     f_buf->net_buff = init_buffer(BUFF_SIZE);
@@ -198,13 +198,11 @@ uint8_t test_net_frame_buff(net_frame_buff_t *f_buf){
 
 void free_net_frame_buff(net_frame_buff_t *f_buf){
     free_buffer(f_buf->net_buff);
-    free(f_buf->frame);
-    free(f_buf);
+    // free_and_set_null(f_buf->frame);
+    free_and_set_null(f_buf);
 }
 
 int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f){
-    zlog_info(log_cat, "frame_t offset: \n head: %ld\n frame_series_num: %ld\n terminal_no: %ld\n type: %ld\n data_len: %ld\n", offsetof(frame_t, head), offsetof(frame_t, frame_series_num), offsetof(frame_t, terminal_no), offsetof(frame_t, type), offsetof(frame_t, data_len));
-
     frame_t *tmp = (frame_t *)buf;
     f->head = tmp->head;
     f->frame_series_num = tmp->frame_series_num;
@@ -282,6 +280,8 @@ int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, r
         }
     }
 
+    free_and_set_null(net_frame_buff);
+    // free_and_set_null(net_frame_buff);
     // recv_total != 意味有收到数据但是对方关闭了socket
     if(operatorFlag != 1 && recv_total != 0){
         zlog_error(log_cat, "数据收取不完整，head: %d; tail %d", net_frame_buff->head_flag, net_frame_buff->tail_flag);
