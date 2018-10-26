@@ -21,7 +21,10 @@ FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
     LOG_FUN;
     // p需要 free
     FileInfoPtr p = (FileInfoPtr)malloc(sizeof(FileInfo));
-
+    if(p == NULL){
+		zlog_error(log_cat, "file_info_init malloc error, error msg: %s", strerror(errno));
+		return NULL;
+	}
     char path_buf[128] = {0};
     getcwd(path_buf, sizeof(path_buf));
 

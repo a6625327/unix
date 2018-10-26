@@ -91,6 +91,10 @@ typedef struct {
     ptr_ring_queue_t ring_buf_end;                  /* Point to the end of the buffer */
 } ring_queue;
 
+typedef struct{
+    pthread_mutex_t queue_lock;
+    ring_queue queue;
+} ring_queue_with_lock;
 /*
 *********************************************************************************************************
 *                                  FUNCTION PROTOTYPES 函数原型
@@ -102,9 +106,8 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
 ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr);
 short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short len);
 void RingQueueClear(ring_queue *ptr_queue);
-unsigned char ring_queue_in_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t *data, ptr_ring_queue_t discard_file_info);
-unsigned char ring_queue_init_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t pbuf,unsigned short queue_len);
-unsigned char ring_queue_out_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t outData);
+unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t *data, ptr_ring_queue_t discard_file_info);
+unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t outData);
 
 /*
 *********************************************************************************************************

@@ -20,4 +20,6 @@
 #include "conf.h"
 #include "zlog.h"
 
+#include "frameHandle.h"
+
 #endif // !__CLIENT_H__

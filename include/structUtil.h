@@ -3,7 +3,6 @@
 
 #include <pthread.h>
 #include <stdlib.h>
-#include "lockMgr.h"
 
 #ifndef  false
 #define  false    0
@@ -14,6 +13,13 @@
 #endif
 
 typedef unsigned char bool;
+
+/*========== 结构体声明 =================*/
+// 该结构储存套接字id以及其地址信息
+struct socket_info{
+    int socket_no;
+    struct sockaddr_in *addr_in;
+};
 
 // call function
 typedef void (*cb_fn)(void *preserve, void *arg);

@@ -8,7 +8,6 @@
 #define ERROR        1
 #define ERROUTOFSIZE 2
 
-#include "deftypes.h"
 #include <signal.h>
 #include <stdio.h>
 #include <error.h>

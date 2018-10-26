@@ -12,39 +12,6 @@ struct send_struct{
 
 struct send_struct CONF;
 
-// /*****************************************************************************
-//  函数名称  :  clientInit()
-//  函数描述  :  client init 
-//  输入参数  :  
-//             ct: int, the socket uset to connect the serv
-//             ipaddr: char *, serv ip address
-//             port: int, the port of serv
-//  返回值    :  int， 没任何错误返回0
-// *****************************************************************************/
-// int clientInit(int *ct, const char *ipaddr, const int port){
-//     *ct = socket(AF_INET, SOCK_STREAM, 0);
-    
-//     // reuse the socket
-//     int on = 1;
-//     if(setsockopt(*ct, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
-//         zlog_error(log_send_test, "faset sockpotiled ! error message %s", strerror(errno));
-//     }
-
-//     struct sockaddr_in s_addr;
-
-//     s_addr.sin_family = AF_INET;
-//     s_addr.sin_port = htons(port);
-//     inet_pton(AF_INET, ipaddr, &s_addr.sin_addr.s_addr);
-
-//     int ret = connect(*ct, (struct sockaddr *)&s_addr, sizeof(struct sockaddr));
-//     if(ret < 0){
-//         zlog_error(log_send_test, "clietn init fail, errorMsg: %s", strerror(errno));
-//         zlog_info(log_send_test, "close socket No: %d", *ct);
-//         close(*ct);
-//     }
-//     return ret;
-// };
-
 void sent_test_conf_cb(){
     CONF.ip = get_conf_string("send_test:ip", "null");
     CONF.path = get_conf_string("file_to_send:path", "null");
@@ -57,7 +24,7 @@ void sent_test_conf_cb(){
     zlog_info(log_send_test, "****CONF LIST EDN   ****");
 }
 
-void send_test(const char *file_path, const char *ip, const int port){
+int8_t send_test(const char *file_path, const char *ip, const int port){
     int i = 0;
     while(i < 10000){
         i++;
@@ -75,35 +42,43 @@ void send_test(const char *file_path, const char *ip, const int port){
         int ret = clientInit(&ct, ip, port);
         if(ret < 0){
             zlog_error(log_send_test, "clietn init fail");
+            fclose(fp);
             continue;
-            // return;
-            // pause();
         }
 
-        int send_len = 0;
-        int send_ret = 1;
+        size_t fread_len = 0;
 
-        char buf[BUFF_SIZE] = {0};
+        char *buf;
         zlog_info(log_send_test, "the ret: %d", ret);
 
         zlog_info(log_send_test, "=========start Send==========!");
-        while((send_len = fread(buf, 1, BUFF_SIZE, fp))){
-            zlog_info(log_send_test, "fread ret: %d", send_len);
-            send_ret = send(ct, buf, send_len, 0);
-            if(send_ret == -1){
-                zlog_error(log_send_test, "send error: %s", strerror(errno));
-            }
-            zlog_info(log_send_test, "send_len: %d", send_len);
-            zlog_info(log_send_test, "sen_content: %s", buf);
 
-            memset(buf, 0, BUFF_SIZE);
+        if(fseek(fp, 0, SEEK_END) == -1){
+            zlog_error(log_cat, "fseek fail, error msg: %s", strerror(errno));
+            return -2;
+        }
+        // 获取文件长度
+        size_t file_size = ftell(fp); 
+
+        // 重置文件指针至文件头部
+        if(fseek(fp, 0, SEEK_SET) == -1){
+            zlog_error(log_cat, "fseek fail, error msg: %s", strerror(errno));
+            return -2;
+        }    
+
+        buf = malloc(file_size);
+        fread_len = fread(buf, 1, file_size, fp);
+        frame_t f;
+        init_frame(&f, buf, fread_len);
+        f.type = 0xA3;
+        size_t f_size = get_frame_size(&f);
+
+        int8_t send_ret = send_frame(ct, &f);
+        if(send_ret != 0){
+            zlog_error(log_send_test, "send_frame error");
         }
 
-        if(send_ret == -1){
-            zlog_error(log_send_test, "send error!");
-        }
-        zlog_info(log_send_test, "=========send Complete==========!");
-        zlog_info(log_send_test, "send cnt: %d", i);
+        free(buf);
 
         fclose(fp);
         close(ct);

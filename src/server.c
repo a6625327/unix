@@ -6,13 +6,20 @@
 #define QUEUE_LEN 15
 #endif // !QUEUE_LEN
 
+// 转义帧队列长度
+#ifndef QUEUE_FRAME_LEN
+#define QUEUE_FRAME_LEN 64
+#endif // !QUEUE_FRAME_LEN
+
 /*========== 函数声明 =================*/
 void discard_file(FileInfoPtr discard_file_info);
 void user_sem_init();
 
 /*========== 全局变量 =================*/
 zlog_category_t *log_all;
-ring_queue queue_recv;
+ring_queue_with_lock queue_recv;
+ring_queue_with_lock queue_frame;
+
 
 /* 
 ** sem_socket_accept： 有客户端请求时，增加该信号量
@@ -24,6 +31,15 @@ sem_t sem_socket_accept;
 sem_t sem_recv_data;
 sem_t sem_escaped_data;
 sem_t sem_send_data;
+
+// typedef struct{
+//     /* 
+//     ** sem_frame_num:     意为收到一个完整的帧
+//     */
+//     sem_t sem_frame_num;
+
+// };
+
 
 // 处理接受数据以及发送数据的线程，各三个
 pthread_t thr_send[MAX_THREAD_COUNT];
@@ -56,10 +72,10 @@ void *send_thread(void *arg){
     LOG_FUN;
     while(1){
         sem_wait(&sem_escaped_data);
-
+        // ***f_info->fp不好一直打开
         // struct socket_info *s_in = arg;
         FileInfoPtr f_info;
-        FILE *fp;
+        // FILE *fp;
 
         int st;
         int ret = clientInit(&st, CONF.dest_ip, CONF.dest_port);
@@ -80,7 +96,7 @@ void *send_thread(void *arg){
             }
 
             if(writeRet == -1){
-                fclose(fp);
+                fclose(f_info->fp);
             }else{
                 zlog_info(log_all, "FileName: %s; File ptr: %p send SUCCESS!" , f_info->file_name, f_info->fp);
                 zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
@@ -99,30 +115,27 @@ void *recv_thread(void *arg){
     while(1){
         sem_wait(&sem_socket_accept);
 
-        char fileName[] = "tmpFile_XXXXXX";
-
-        struct thread_lock *data_locked = get_used_lock();
+        struct thread_lock *data_locked = get_pending_lock();
         if(data_locked == NULL){
             zlog_error(log_all, "there is no pending lock, may something happended");
-        }
-
-        struct socket_info *s_in = data_locked->data;
-
-        zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
-        zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->use_flag);
-
-        int fd;
-        if((fd = mkstemp(fileName)) == -1){   
-            zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
             continue;
         }
 
-        FILE *fp = fdopen(fd, "wb+");
+        struct socket_info *s_in = data_locked->data;
+        int old_socket = s_in->socket_no;
 
-        char recv_status = 0;
+        zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
+        zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->proce_status);
 
-        recv_status = recv_write_to_tmpFile(s_in->socket_no, fp);
-        
+        int8_t recv_status = recv_from_socket_and_test_a_frame(s_in, &sem_recv_data, &queue_frame);
+        if(recv_status != 1){
+            zlog_error(log_all, "recv_from_socket_and_test_a_frame error, recv_status: %d", recv_status);
+        }else{
+            zlog_info(log_all, "recv_from_socket_and_test_a_frame success");
+        }
+        unset_lock_used_flag(data_locked);
+
+        close(old_socket);
     }
 }
 
@@ -132,64 +145,81 @@ void *handle_recv_data(void *arg){
     // pthread_detach(pthread_self());
     while(1){
         sem_wait(&sem_recv_data);
+        zlog_info(log_all, "handle thread get the sem");
 
-        char fileName[] = "tmpFile_XXXXXX";
+        info_between_thread *info;
+        ring_queue_out_with_lock(&queue_frame, (ptr_ring_queue_t)&info);
 
-        struct thread_lock *data_locked = get_pending_lock();
-        if(data_locked == NULL){
-            zlog_error(log_all, "there is no pending lock, may something happended");
-        }
+        buff_t *buf = info->buf;
 
-        struct socket_info *s_in = data_locked->data;
+        uint8_t *unescape_data;
+        size_t unescape_data_len;
 
-        zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
-        zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->use_flag);
-
-        int fd;
-        if((fd = mkstemp(fileName)) == -1){   
-            zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
+        int8_t escape_ret = unescaper(buf->buf, buf->buf_num, (void *)&unescape_data, &unescape_data_len);
+        if(escape_ret != 0){
+            zlog_error(log_all, "unescaper error");
+            free_buffer(buf);
             continue;
         }
 
-        FILE *fp = fdopen(fd, "wb+");
+        frame_t recv_frame;
+        switch_buff2frame_struct(unescape_data, unescape_data_len, &recv_frame);
+        free(unescape_data);
 
-        char recv_status = 0;
-        recv_status = recv_write_to_tmpFile(s_in->socket_no, fp);
-
-        if(recv_status == 1){
+        // 范文件传输
+        if(recv_frame.type == 0xA3){
             // 如果环形缓冲区满了，那么就要进行相应操作，此处丢弃缓冲区头部的文件
             FileInfoPtr discard_file_info = NULL;
 
+            int fd;
+            char fileName[] = "tmpFile_XXXXXX";
+
+            if((fd = mkstemp(fileName)) == -1){   
+                zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
+                continue;
+            }
+            FILE *fp = fdopen(fd, "wb+");
+            if(fp == NULL){
+                zlog_error(log_all, "fdopen fail, err msg: %s", strerror(errno));
+                continue;
+            }
+
+            size_t ret = fwrite(recv_frame.data, sizeof(uint8_t), recv_frame.data_len, fp);
+            if(ret != recv_frame.data_len){
+                zlog_error(log_all, "handle_recv_data fwrite error, msg: %s", strerror(errno));
+                fclose(fp);
+                free(recv_frame.data);
+                continue;
+            }
+            fflush(fp);
+            fclose(fp);
+            free(recv_frame.data);
+
+
             // 收到的文件信息入队
             zlog_info(log_all, "FILE_NAME: %s", fileName);
-            zlog_info(log_all, "ip addr: %s", inet_ntoa(s_in->addr_in->sin_addr));
+            zlog_info(log_all, "ip addr: %s", inet_ntoa(info->s_in->addr_in->sin_addr));
             
-            FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(s_in->addr_in->sin_addr));
+            FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(info->s_in->addr_in->sin_addr));
             file_info_ptr->fp = fp;
 
             unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
-            zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, inet_ntoa(s_in->addr_in->sin_addr));
+            zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, inet_ntoa(info->s_in->addr_in->sin_addr));
 
             if(err == RQ_ERR_BUFFER_FULL){
                 // 如果队伍满了，输出丢弃文件的日志
                 discard_file(discard_file_info);
             }else{
                 // 增加收数据的信号量
-                sem_post(&sem_recv_data);
+                sem_post(&sem_escaped_data);
             }
-        }else{
-            zlog_error(log_all, "the recv_status return error");
-            unlink(fileName);
-            fclose(fp);
-        }
-        
-        close(s_in->socket_no);
-        
-        // 释放main函数中的资源
-        free(s_in->addr_in);
-        free(s_in);
 
-        unset_lock_used_flag(data_locked);
+            close(info->s_in->socket_no);
+            
+            // 释放main函数中的资源
+            free(info->s_in->addr_in);
+            free(info->s_in);
+        }
     }
 }
 
@@ -254,11 +284,19 @@ int main(int argc, char const *argv[]){
     
     // 队列初始化
     static ring_queue_t queue_recv_buf[QUEUE_LEN];
-    ring_queue_init_with_lock(&queue_recv, queue_recv_buf, QUEUE_LEN);
+    static ring_queue_t queue_frame_buf[QUEUE_FRAME_LEN];
     
+
+    uint8_t err;
+    RingQueueInit(&queue_recv.queue, queue_recv_buf, QUEUE_LEN, &err);
+    RingQueueInit(&queue_frame.queue, queue_frame_buf, QUEUE_FRAME_LEN, &err);
+
     // 线程初始化
     int client_st;
     pthread_init(&client_st);
+
+    pthread_t handle_thr;
+    pthread_create(&handle_thr, NULL, handle_recv_data, NULL);
 
     // 服务器初始化
     int st = servInit(CONF.serv_init_ip, CONF.serv_init_port);
@@ -303,6 +341,7 @@ int main(int argc, char const *argv[]){
         
         data_locked->data = (void *)client_info;
 
+        set_lock_pending_flag(data_locked);
         // set_lock_pending_flag(data_locked);
         sem_post(&sem_socket_accept);
     }

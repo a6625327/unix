@@ -4,7 +4,7 @@ set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/bin")
 # 所需要包含的动态库，分别有线程、日志、配置解析
 set(LINK_LIBRATIES zlog pthread iniparser) 
 # 可执行程序一共有三个，serv、recv、send
-set(EXEC_BIN serv recv send)
+set(EXEC_BIN serv recv send) 
 
 # 可执行的主程序需要链接的目标文件目录
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/util/ serv_src)
@@ -30,6 +30,8 @@ add_library(obj OBJECT ${serv_src})
 add_executable(serv server.c $<TARGET_OBJECTS:obj>)
 add_executable(recv recv.c   $<TARGET_OBJECTS:obj>)
 add_executable(send send.c   $<TARGET_OBJECTS:obj>)
+# add_executable(ttt ttt.c     $<TARGET_OBJECTS:obj>)
+# add_executable(ddd ddd.c)
 
 # 将所有可执行程序链接动态库
 foreach(item ${EXEC_BIN})

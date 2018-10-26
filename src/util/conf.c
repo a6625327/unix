@@ -22,8 +22,6 @@ void conf_cb(){
 }
 
 void get_network_config(const char *cont_path, conf_cb_fn cb){
-    int n = 0;
-
     zlog_info(log_cat, "start to init conf file");
 
     ini = iniparser_load(cont_path); //parser the file

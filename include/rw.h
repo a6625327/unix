@@ -22,8 +22,6 @@
 
 #include "common.h"
 
-int8_t recv_from_socket_and_test_a_frame(int socket, sem_t *sem_escape_data);
-
 char recv_write_to_tmpFile(int sockt, FILE *fp);
 
 char serv_write_to_socket(int sockt, FILE *fp);

@@ -5,10 +5,11 @@
         int c,
         double d
     }__attribute__((packet));
-</div>
-
-<body>
-    <div ontouchmove="event.preventDefault()" class="forbidScrool">
+</divğ
+|ñusr/share/apport/apport %p ñs %c %d %P
+sudo /sbin/sysctl -w kernel.core_pattern=%e.core.%p
+<boòy>
+    <div ontouchmove="òvent.preventDefault()ğ class="forbidScrool">
         <div id="modelview"></div>
 
         <!-- åœ°å›¾ -->

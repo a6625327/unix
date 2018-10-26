@@ -33,7 +33,11 @@
         "stdint-intn.h": "c",
         "escape.h": "c",
         "inet.h": "c",
-        "in.h": "c"
+        "in.h": "c",
+        "buffer.h": "c",
+        "pthread.h": "c",
+        "ctype.h": "c",
+        "stdio.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled",
     "C_Cpp.dimInactiveRegions": true

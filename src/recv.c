@@ -19,53 +19,6 @@ void recv_test_conf_cb(){
     zlog_info(log_recv_test, "****CONF LIST EDN   ****");
 }
 
-// /*****************************************************************************
-//  函数名称  :  servInit()
-//  函数描述  :  client init 
-//  输入参数  :  
-//             ipaddr: char *, the ip address want to listen
-//             port: int, the port of serv itself listening
-//  返回值    :  int， socket descriptor
-// *****************************************************************************/
-// int servInit(const char *ipaddr, const int port){
-//     int st = socket(AF_INET, SOCK_STREAM, 0);
-//     if(st == -1){
-//         zlog_error(log_recv_test, "open socket failed! error message:%s", strerror(errno));
-//         return -1;
-//     }
-
-//     // reuse the socket
-//     int on = 1;
-//     if(setsockopt(st, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1){
-//         zlog_error(log_recv_test, " faset sockpotiled ! error message %s", strerror(errno));
-//         return -1;
-//     }
-
-//     struct sockaddr_in addr;
-//     memset(&addr, 0, sizeof(addr));
-
-//     // set TCP/IP connect
-//     addr.sin_family = AF_INET;
-
-//     // set port
-//     addr.sin_port = htons(port);
-
-//     // set listen to any address
-//     inet_pton(AF_INET, ipaddr, &addr.sin_addr.s_addr);
-
-//     if(bind(st, (struct sockaddr *) &addr, sizeof(addr)) == -1){
-//         zlog_error(log_recv_test, "bind ip failed ! error message :%s", strerror(errno));
-//         return -1;
-//     }
-
-//     if(listen(st, 1) == -1){
-//         zlog_error(log_recv_test, "listen failed ! error message :%s", strerror(errno));
-//         return -1;
-//     }
-    
-//     return st;
-// }
-
 struct recv_struct CONF;
 void recv_test(const char *ip, const int port){
     int st = servInit(ip, port);
@@ -87,33 +40,15 @@ void recv_test(const char *ip, const int port){
         
         zlog_info(log_recv_test, "client accept by: %s", inet_ntoa(client_addr.sin_addr));
 
-        int flag = 0;
-        char operatorFlag = 0;
-        char buf[BUFSIZ] = {0};
-
-        while(1){
-            flag = recv(client_st, buf, sizeof(buf), 0);
-            if(flag == 0){
-                cnt++;
-                zlog_notice(log_recv_test, "对方已经关闭连接！, msg: %s", strerror(errno));
-                operatorFlag = 1;
-                break;
-            }else if(flag == -1){
-                zlog_error(log_recv_test, "recv failed ! error message : %s", strerror(errno));
-                operatorFlag = -1;
-                break;
-            }
-
-            zlog_info(log_recv_test, "the recv count: %d", flag);
-            zlog_info(log_recv_test, "the recv content: %s\n", buf);
-
-            memset(buf, 0, flag);
-        }
-
+        int8_t operatorFlag = 0;
+        frame_t f;
+        operatorFlag = recv_frame(client_st, &f);
         
-        if(operatorFlag == -1){
-            zlog_error(log_recv_test, "client recv fail");
-        }
+        zlog_info(log_recv_test, "the frame f");
+        hzlog_info(log_recv_test, &f, sizeof(frame_t));
+
+        cnt++;
+        
         zlog_info(log_recv_test, "the recv time: %d", cnt);
         close(client_st);
     }

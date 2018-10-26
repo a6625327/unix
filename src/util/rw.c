@@ -1,42 +1,22 @@
 #include "rw.h"
 
-/*****************************************************************************
- 函数描述  :  接收数据并且会判断是否接收完一帧数据
- 输入参数  :  
-             lock：struct thread_lock *，线程锁结构指针
- 返回值    :  
-             1：接收完成，对方主动关闭套接字
-            -1：从套接字接收数据出现错误，会打印出相关信息
-            -2：
-            -3：
-*****************************************************************************/
-int8_t recv_from_socket_and_test_a_frame(int socket, sem_t *sem_escape_data){
+
+
+int8_t write_buf_to_file(void *data, size_t len, FILE *fp){
     LOG_FUN;
 
-    char buf[BUFF_SIZE] = {0};
-
-    int flag = 0;
     char operatorFlag = 0;
-
     int writeCnt = 0;
-    
-    while(1){
-        flag = recv(socket, buf, sizeof(buf), 0);
-        
-        if(flag == 0){
-            zlog_info(log_cat, "对方已经关闭连接！");
-            operatorFlag = 1;
-            break;
-        }else if(flag == -1){
-            zlog_warn(log_cat, "recv failed ! error message : %s", strerror(errno));
-            operatorFlag = -1;  
+    do{
+        if((writeCnt = fwrite(data, sizeof(uint8_t), len, fp)) != len){
+            zlog_error(log_cat, "write_buf_to_file fwrite fail ! error message : %s", strerror(errno));
+            operatorFlag = -1;
             break;
         }
         zlog_info(log_cat, "write Count: %d", writeCnt);
-        hzlog_info(log_cat, buf, writeCnt);
-    }
-
-    zlog_info(log_cat, "recv operatorFlag： %d", operatorFlag);
+    }while(writeCnt != 0);
+    
+    fflush(fp);
 
     return operatorFlag;
 }
@@ -46,13 +26,15 @@ char recv_write_to_tmpFile(int socket, FILE *fp){
 
     char buf[BUFF_SIZE] = {0};
 
-    int flag = 0;
     char operatorFlag = 0;
 
-    int writeCnt = 0;
     zlog_info(log_cat, "the socket: %d, the fp need to write: %p", socket, fp);
     
     while(1){
+        int writeCnt = 0;
+
+        int flag = 0;
+
         flag = recv(socket, buf, sizeof(buf), 0);
 
         if(flag < sizeof(buf)){
@@ -93,8 +75,7 @@ char recv_write_to_tmpFile(int socket, FILE *fp){
 size_t write_buff_to_socket(int st, uint8_t *buf, size_t len){
     LOG_FUN;
 
-    uint16_t send_ret = 1;
-    
+    uint16_t send_ret;
     send_ret = send(st, buf, len, 0);
 
     if(send_ret == -1){

@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/include",
                 "${workspaceFolder}",
-                "${workspaceFolder}/include/lib"
+                "${workspaceFolder}/include/lib",
+                "${workspaceFolder}/include/iniparser"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

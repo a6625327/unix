@@ -52,32 +52,22 @@ pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 // 内部使用，给定将给定指针在环形缓冲区内向前移动一步(到尾了会移回头)
 static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t* pPointer);
 
-unsigned char ring_queue_in_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t *inData, ptr_ring_queue_t discard_file_info){
+unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t *inData, ptr_ring_queue_t discard_file_info){
     unsigned char err;
 
-    pthread_mutex_lock(&queue_lock);
-    RingQueueIn(ptr_queue, (ptr_ring_queue_t)inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, discard_file_info);
-    pthread_mutex_unlock(&queue_lock);
+    pthread_mutex_lock(&ptr_queue->queue_lock);
+    RingQueueIn(&ptr_queue->queue, (ptr_ring_queue_t)inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, discard_file_info);
+    pthread_mutex_unlock(&ptr_queue->queue_lock);
 
     return err;
 }
 
-unsigned char ring_queue_init_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t pbuf,unsigned short queue_len){
+unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t outData){
     unsigned char err;
 
-    pthread_mutex_lock(&queue_lock);
-    RingQueueInit(ptr_queue, pbuf, queue_len, &err);
-    pthread_mutex_unlock(&queue_lock);
-
-    return err;
-}
-
-unsigned char ring_queue_out_with_lock(ring_queue *ptr_queue, ptr_ring_queue_t outData){
-    unsigned char err;
-
-    pthread_mutex_lock(&queue_lock);
-    *outData = (ring_queue_t)RingQueueOut(ptr_queue, &err);
-    pthread_mutex_unlock(&queue_lock);
+    pthread_mutex_lock(&ptr_queue->queue_lock);
+    *outData = (ring_queue_t)RingQueueOut(&ptr_queue->queue, &err);
+    pthread_mutex_unlock(&ptr_queue->queue_lock);
 
     return err;
 }
@@ -158,8 +148,10 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
             zlog_notice(log_cat, "the discard ptr: %p", ptr_queue->ring_buf_in_ptr);
             discard_cnt++;
             zlog_info(log_cat, "the discard_cnt Cnt: %d", discard_cnt);
-
-            *discard_data = *ptr_queue->ring_buf_in_ptr;
+            
+            if(discard_data != NULL){
+                *discard_data = *ptr_queue->ring_buf_in_ptr;
+            }
             _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr); /* Wrap OUT pointer                          */  
         }else{                                            // option == RQ_OPTION_WHEN_FULL_DONT_IN
             return ptr_queue->ring_buf_of_cnt;
