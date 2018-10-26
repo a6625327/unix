@@ -8,8 +8,10 @@
 #include <error.h>
 #include <errno.h>
 
-#include <bits/stdint-intn.h>
-#include <bits/stdint-uintn.h>
+// #include <bits/stdint-intn.h>
+// #include <bits/stdint-uintn.h>
+#include <stdint.h>
+
 
 typedef struct{
     void *buf;

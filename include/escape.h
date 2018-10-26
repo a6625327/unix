@@ -14,9 +14,10 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <bits/stdint-intn.h>
-#include <bits/stdint-uintn.h>
+// #include <bits/stdint-intn.h>
+// #include <bits/stdint-uintn.h>
 
+#include <stdint.h>
 #include "userLog.h"
 
 /************** ???????? **************/

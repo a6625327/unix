@@ -16,14 +16,27 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <bits/stdint-intn.h>
-#include <bits/stdint-uintn.h>
+// #include <bits/stdint-intn.h>
+// #include <bits/stdint-uintn.h>
 
 #include "structUtil.h"
 
 #include "userLog.h"
 
 #define BUFF_SIZE 1024 * 1
+
+/* Fixed-size types, underlying types depend on word size and compiler.  */
+typedef signed char __int8_t;
+typedef unsigned char __uint8_t;
+typedef signed short int __int16_t;
+typedef unsigned short int __uint16_t;
+typedef signed int __int32_t;
+typedef unsigned int __uint32_t;
+
+typedef __uint8_t uint8_t;
+typedef __uint16_t uint16_t;
+typedef __uint32_t uint32_t;
+typedef __uint64_t uint64_t;
 
 /*****************************************************************************
  函数名称  :  clientInit()

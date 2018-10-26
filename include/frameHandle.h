@@ -12,8 +12,8 @@
 
 // for strerror()
 #include <string.h>
-#include <bits/stdint-intn.h>
-#include <bits/stdint-uintn.h>
+// #include <bits/stdint-intn.h>
+// #include <bits/stdint-uintn.h>
 #include <semaphore.h>
 
 #include <pthread.h>
