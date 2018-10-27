@@ -210,6 +210,7 @@ void unset_lock_used_flag(struct thread_lock *lock){
 
     lock->proce = UNUSED;
     lock->proce_status = FREE;
+    lock->data = NULL;
     zlog_info(log_cat, "unset the lock proce, the Cnt: %d, now the proce: %d", lock->lock_no, lock->proce);
 
     pthread_mutex_unlock(&lock->t_lock);

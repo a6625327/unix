@@ -14,7 +14,7 @@
 
 
 typedef struct{
-    void *buf;
+    uint8_t *buf;
     size_t capacity;
     size_t buf_num;
     uint64_t No;

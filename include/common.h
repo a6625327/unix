@@ -27,7 +27,8 @@
 
 void free_and_set_null(void *__ptr);
 void fclose_and_set_null(FILE *__straem);
-
+void *malloc_print_addr(size_t size);
+void *realloc_print_addr(void *__ptr, size_t size);
 
 /*****************************************************************************
  函数名称  :  clientInit()

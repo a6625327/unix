@@ -20,7 +20,8 @@ typedef FileInfo* FileInfoPtr;
 FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
     LOG_FUN;
     // p需要 free
-    FileInfoPtr p = (FileInfoPtr)malloc(sizeof(FileInfo));
+    FileInfoPtr p = (FileInfoPtr)malloc_print_addr(sizeof(FileInfo));
+    zlog_info(log_cat, "FileInfoPtr p %p", p);
     if(p == NULL){
 		zlog_error(log_cat, "file_info_init malloc error, error msg: %s", strerror(errno));
 		return NULL;

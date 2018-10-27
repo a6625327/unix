@@ -93,7 +93,8 @@ uint8_t get_buff_from_file(FILE *fp, uint8_t *buf, uint16_t *file_size){
     // 获取文件长度
     *file_size = ftell(fp);  
 
-    buf = malloc(sizeof(uint8_t) * (*file_size));
+    buf = malloc_print_addr(sizeof(uint8_t) * (*file_size));
+    
     if(buf == NULL){
 		zlog_error(log_cat, "get_buff_from_file malloc error, error msg: %s", strerror(errno));
 		return -2;
@@ -125,11 +126,29 @@ void free_buff_from_file(uint8_t *buf){
 }
 
 void free_and_set_null(void *__ptr){
-    free(__ptr);
-    __ptr = NULL;
+    if(__ptr != NULL){
+        zlog_info(log_cat, "the addr free is %p", __ptr);
+        free(__ptr);
+        __ptr = NULL;
+    }
 }
 
 void fclose_and_set_null(FILE *__straem){
-    fclose(__straem);
-    __straem = NULL;
+    if(__straem != NULL){
+        fclose(__straem);
+        __straem = NULL;
+    }
+}
+
+void *malloc_print_addr(size_t size){
+    void *__p = malloc(size);
+    zlog_info(log_cat, "the addr malloc is %p", __p);
+    return __p;
+}
+
+void *realloc_print_addr(void *__ptr, size_t size){
+    void *old_ptr = __ptr;
+    __ptr = realloc(__ptr, size);
+    zlog_info(log_cat, "old ptr %p, new ptr %p", old_ptr, __ptr);
+    return __ptr;
 }

@@ -63,7 +63,7 @@ int8_t send_frame(int st, frame_t *f){
     size_t frame_t_len = get_frame_size(f);
 
     // origin指原始数据，未经过转义处理, f_buf_origin需要free
-    uint8_t *f_buf_origin = malloc(frame_t_len);
+    uint8_t *f_buf_origin = malloc_print_addr(frame_t_len);
     uint8_t *f_buf_origin_p = f_buf_origin;
     if(f_buf_origin == NULL){
 		zlog_error(log_cat, "send_frame malloc error, error msg: %s", strerror(errno));
@@ -115,7 +115,7 @@ int8_t recv_frame(int st, frame_t *f){
             break;
         }
         operatorFlag = add_and_test_net_frame_buff(net_frame_buff, buf->buf, recv_ret);
-        if(operatorFlag == 1){
+        if(operatorFlag == 0){
             zlog_info(log_cat, "the recv count: %ld", recv_ret);
             hzlog_info(log_cat, buf->buf, buf->buf_num);
 
@@ -153,18 +153,18 @@ int8_t recv_frame(int st, frame_t *f){
 //////////////////////////
 net_frame_buff_t *init_net_frmae_buf(){
     // f_buf 需要 free
-    net_frame_buff_t *f_buf = malloc(sizeof(net_frame_buff_t));
+    net_frame_buff_t *f_buf = malloc_print_addr(sizeof(net_frame_buff_t));
+    zlog_info(log_cat, "net_frame_buff_t *f_buf %p", f_buf);
     // f_buf->frame = malloc(sizeof(frame_t));
 
-    f_buf->net_buff = init_buffer(BUFF_SIZE);
-    zlog_info(log_cat, "the buff_t addr: %p", f_buf->net_buff);
-    if(f_buf == NULL || f_buf->net_buff == NULL){
-		zlog_error(log_cat, "file_info_init malloc error, error msg: %s", strerror(errno));
-    }
+    // f_buf->net_buff = init_buffer(BUFF_SIZE);
+    // zlog_info(log_cat, "the buff_t addr: %p", f_buf->net_buff);
+    // if(f_buf == NULL || f_buf->net_buff == NULL){
+	// 	zlog_error(log_cat, "file_info_init malloc error, error msg: %s", strerror(errno));
+    // }
     // set_all_zero_frame(f_buf->frame);
     f_buf->head_flag = 0;
     f_buf->tail_flag = 0;
-    f_buf->net_buff = init_buffer(BUFF_SIZE);
     return f_buf;
 }
 
@@ -176,24 +176,31 @@ int8_t add_net_frame_buf(net_frame_buff_t *f_buf, void *data, size_t data_len){
     return 0;
 }
 
-uint8_t test_net_frame_buff(net_frame_buff_t *f_buf){
+// return 0 有头有尾； -1 有头无尾； -2有尾无头
+int8_t test_net_frame_buff(net_frame_buff_t *f_buf){
     if(memchr(f_buf->net_buff->buf, 0xF1, f_buf->net_buff->buf_num) == NULL){
         zlog_info(log_cat, "the net buff has no head");
-        return -1;
     }else{
         f_buf->head_flag = 1;
     }
     
     if(memchr(f_buf->net_buff->buf, 0xF2, f_buf->net_buff->buf_num) == NULL){
         zlog_info(log_cat, "the net buff has no tail");
-        return -1;
     }else{
         f_buf->tail_flag = 1;
         zlog_info(log_cat, "we have get a frame");
         hzlog_info(log_cat, f_buf->net_buff->buf, f_buf->net_buff->buf_num);
-        return 1;
     }
-    return 0;
+    if(f_buf->head_flag == 1 && f_buf->tail_flag == 1){
+        return 0;
+    }else{
+        if(f_buf->head_flag == 1){
+            return -1;
+        }
+        if(f_buf->tail_flag == 1){
+            return -2;
+        }
+    }
 }
 
 void free_net_frame_buff(net_frame_buff_t *f_buf){
@@ -209,7 +216,9 @@ int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f){
     f->terminal_no = tmp->terminal_no;
     f->type = tmp->type;
     f->data_len = tmp->data_len;
-    f->data = malloc(tmp->data_len);
+    f->data = malloc_print_addr(tmp->data_len);
+    zlog_info(log_cat, "f->data %p, sitch cnt: %d", f->data, tmp->data_len);
+
     if(f->data == NULL){
 		zlog_error(log_cat, "switch_buff2frame_struct malloc error, error msg: %s", strerror(errno));
 		return -1;
@@ -225,14 +234,10 @@ int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f){
 int8_t add_and_test_net_frame_buff(net_frame_buff_t *f_buf, void *data, size_t data_len){
     if(add_net_frame_buf(f_buf, data, data_len) != 0){
         zlog_error(log_cat, "add_net_frame_buf error");
-        return -2;
+        return -3;
     }else{
-        if(test_net_frame_buff(f_buf) == 1){
-            return 1;
-        }else{
-            zlog_error(log_cat, "test_net_frame_buff error");
-            return -3;
-        }
+        // 0 有头有尾； -1 有头无尾； -2有尾无头
+        return test_net_frame_buff(f_buf);
     }
 }
 
@@ -245,47 +250,73 @@ int8_t add_and_test_net_frame_buff(net_frame_buff_t *f_buf, void *data, size_t d
             -1：从套接字接收数据出现错误，会打印出相关信息
             -2：增加网络数据流到帧缓存时出错
             -3：测试该缓存帧是否完整的一个数据帧时出错
+            -4：recv报错，但是已经成功接收过起码一个帧
+            -5：recv报错，并且没成功接收过一个帧
 *****************************************************************************/
-int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, ring_queue_with_lock *queue){
+int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, ring_queue_with_sem *queue){
     LOG_FUN;
 
     char buf[BUFF_SIZE] = {0};
 
+    // 内存泄露
     net_frame_buff_t *net_frame_buff = init_net_frmae_buf();
 
     char operatorFlag = 0;
     size_t recv_total = 0;
+    // 如果从s_in->socket_no中接收过数据并且成功解析出帧的，
+    // 那么在recv失败的时候需要告知外界该s_in信息不能被free（handle线程需要使用这个信息）
+    int8_t s_in_valid = 0;
+
     while(1){
         size_t recv_ret;
 
         recv_ret = recv(s_in->socket_no, buf, sizeof(buf), 0);
         if(recv_ret == 0){
             zlog_info(log_cat, "对方已经关闭连接！");
+            zlog_info(log_cat, "收发情况, head: %d, tail: %d， operatorFlag: %d", net_frame_buff->head_flag, net_frame_buff->tail_flag, operatorFlag);
             break;
         }else if(recv_ret == -1){
-            zlog_warn(log_cat, "recv failed ! error message : %s", strerror(errno));
+            zlog_warn(log_cat, "recv 失败 ! error message : %s", strerror(errno));
+            // -1~-3被add_and_test_net_frame_buff（）使用
+            if(s_in_valid == 1){
+                operatorFlag = -4;
+            }else{
+                operatorFlag = -5;
+            }
             break;
         }
+        net_frame_buff->net_buff = init_buffer(BUFF_SIZE);
+        zlog_info(log_cat, "net_frame_buff->net_buff %p", net_frame_buff->net_buff);
+
         recv_total += recv_ret;
         operatorFlag = add_and_test_net_frame_buff(net_frame_buff, buf, recv_ret);
-        if(operatorFlag == 1){
-            info_between_thread *info = malloc(sizeof(info_between_thread));
-            info->s_in = s_in;
+        if(operatorFlag == 0){
+            s_in_valid = 1;
+            // 内存泄露
+            info_between_thread *info = malloc_print_addr(sizeof(info_between_thread));
+            zlog_info(log_cat, "info_between_thread *info %p", info);
+
+            info->client_addr = strdup(inet_ntoa(s_in->addr_in->sin_addr));
             info->buf = net_frame_buff->net_buff;
-            unsigned char err = ring_queue_in_with_lock(queue, (ptr_ring_queue_t *)info, NULL);
-            // 更新锁的地址，因为数据已经接收完成，该数据所被释放，需获得新锁继续接收数据
+            net_frame_buff->net_buff = NULL;
+            net_frame_buff->head_flag = 0;
+            net_frame_buff->tail_flag = 0;
+
+            ring_queue_in_with_sem(queue, (ptr_ring_queue_t *)info);
             sem_post(sem);
+
+            // 更新operatorFlag
+            operatorFlag = 0;
         }else{
             break;
         }
     }
 
-    free_and_set_null(net_frame_buff);
-    // free_and_set_null(net_frame_buff);
-    // recv_total != 意味有收到数据但是对方关闭了socket
-    if(operatorFlag != 1 && recv_total != 0){
-        zlog_error(log_cat, "数据收取不完整，head: %d; tail %d", net_frame_buff->head_flag, net_frame_buff->tail_flag);
+    if(net_frame_buff->net_buff != NULL){
         free_buffer(net_frame_buff->net_buff);
     }
+
+    free_and_set_null(net_frame_buff);
+
     return operatorFlag;
 }

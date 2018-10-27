@@ -28,7 +28,6 @@ struct thread_lock{
     unsigned char lock_no;
     pthread_mutex_t t_lock; 
     void *data;
-    buff_t *frame_buff; // 存储 struct net_frame_buff_t的指针
 };
 
 void thread_lock_init();

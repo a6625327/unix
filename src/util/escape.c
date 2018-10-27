@@ -6,7 +6,7 @@
 int8_t escaper(void *data, const size_t escap_num, void **ret_data, size_t *ret_data_num){   //用完需要free返回值
 	LOG_FUN;
 	// tem_buf需要free
-	uint8_t *tem_buf = malloc(sizeof(uint8_t) * escap_num * 2); 
+	uint8_t *tem_buf = malloc_print_addr(sizeof(uint8_t) * escap_num * 2); 
 	uint8_t *tem_buf_p = tem_buf;
 	if(tem_buf == NULL){
 		zlog_error(log_cat, "tem_buf malloc error, error msg: %s", strerror(errno));
@@ -64,7 +64,7 @@ int8_t escaper(void *data, const size_t escap_num, void **ret_data, size_t *ret_
 int8_t unescaper(void *data, const size_t unescap_num, void **ret_data, size_t *ret_data_num){	
 	LOG_FUN;
 	// tem_buf需要free
-	uint8_t *tem_buf = malloc(sizeof(uint8_t) * unescap_num); 
+	uint8_t *tem_buf = malloc_print_addr(sizeof(uint8_t) * unescap_num); 
 	uint8_t *tem_buf_p = tem_buf;
 
 	uint16_t  unescape_str_cnt = 0;         // 转义的次数

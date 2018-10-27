@@ -26,7 +26,7 @@ void sent_test_conf_cb(){
 
 int8_t send_test(const char *file_path, const char *ip, const int port){
     int i = 0;
-    while(i < 10000){
+    while(i < 20000){
         i++;
         FILE *fp = fopen(file_path, "rb");
         zlog_info(log_send_test, "the file is open, the ptr: %p", fp);
@@ -43,7 +43,7 @@ int8_t send_test(const char *file_path, const char *ip, const int port){
         if(ret < 0){
             zlog_error(log_send_test, "clietn init fail");
             fclose_and_set_null(fp);
-            continue;
+            // continue;
         }
 
         size_t fread_len = 0;
@@ -66,7 +66,7 @@ int8_t send_test(const char *file_path, const char *ip, const int port){
             return -2;
         }    
 
-        buf = malloc(file_size);
+        buf = malloc_print_addr(file_size);
         fread_len = fread(buf, 1, file_size, fp);
         frame_t f;
         init_frame(&f, buf, fread_len);

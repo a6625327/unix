@@ -52,6 +52,37 @@ pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 // 内部使用，给定将给定指针在环形缓冲区内向前移动一步(到尾了会移回头)
 static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t* pPointer);
 
+void ring_queue_in_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t *inData){
+    unsigned char err;
+    sem_wait(&ptr_queue_with_sem->queue_empty_num);
+    RingQueueIn(&ptr_queue_with_sem->queue, (ptr_ring_queue_t)inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, NULL);
+    sem_post(&ptr_queue_with_sem->queue_full_num);
+}
+
+void ring_queue_out_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t outData){
+    unsigned char err;
+    sem_wait(&ptr_queue_with_sem->queue_full_num);
+    *outData = (ring_queue_t)RingQueueOut(&ptr_queue_with_sem->queue, &err);
+    sem_post(&ptr_queue_with_sem->queue_empty_num);
+}
+
+ring_queue_with_sem* RingQueueInit_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t pbuf, unsigned short bufSize){
+    if(-1 == sem_init(&ptr_queue_with_sem->queue_empty_num, 0, bufSize)){
+        zlog_error(log_cat, "Semaphore queue_empty_num init fail!");
+        exit(-1);
+    }
+
+    if(-1 == sem_init(&ptr_queue_with_sem->queue_full_num, 0, 0)){
+        zlog_error(log_cat, "Semaphore queue_full_num init fail!");
+        exit(-1);
+    }
+
+    unsigned char err;
+    RingQueueInit(&ptr_queue_with_sem->queue, pbuf, bufSize, &err);
+
+    return ptr_queue_with_sem;
+}
+
 unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t *inData, ptr_ring_queue_t discard_file_info){
     unsigned char err;
 
@@ -161,6 +192,7 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
         *perr = RQ_ERR_NONE;
     }
     *ptr_queue->ring_buf_in_ptr = data;                       /* Put character into buffer                */  
+    zlog_info(log_cat, "queue in addr %p", ptr_queue->ring_buf_in_ptr);
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_in_ptr);      /* Wrap IN pointer                          */  
 
     zlog_notice(log_cat, "now the count: %d", ptr_queue->ring_buf_of_cnt);
@@ -199,6 +231,7 @@ ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr){
     }
     ptr_queue->ring_buf_of_cnt--;                                      /*  decrement character count           */  
     data = *ptr_queue->ring_buf_out_ptr;                      /* Get character from buffer                */  
+    zlog_info(log_cat, "queue out addr %p", ptr_queue->ring_buf_out_ptr);
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr);        /* Wrap OUT pointer                          */  
     *perr = RQ_ERR_NONE;
 

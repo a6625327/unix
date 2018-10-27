@@ -3,7 +3,7 @@
 
 // 收发文件队列长度
 #ifndef QUEUE_LEN
-#define QUEUE_LEN 15
+#define QUEUE_LEN 2
 #endif // !QUEUE_LEN
 
 // 转义帧队列长度
@@ -18,7 +18,7 @@ void user_sem_init();
 /*========== 全局变量 =================*/
 zlog_category_t *log_all;
 ring_queue_with_lock queue_recv;
-ring_queue_with_lock queue_frame;
+ring_queue_with_sem queue_frame;
 
 
 /* 
@@ -122,20 +122,26 @@ void *recv_thread(void *arg){
         }
 
         struct socket_info *s_in = data_locked->data;
-        int old_socket = s_in->socket_no;
+        int socket_tmp = s_in->socket_no;
 
         zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
         zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->proce_status);
 
         int8_t recv_status = recv_from_socket_and_test_a_frame(s_in, &sem_recv_data, &queue_frame);
-        if(recv_status != 1){
-            zlog_error(log_all, "recv_from_socket_and_test_a_frame error, recv_status: %d", recv_status);
+        if(recv_status != 0){
+            zlog_error(log_all, "recv_from_socket_and_test_a_frame error, recv_status: %d",recv_status);
         }else{
             zlog_info(log_all, "recv_from_socket_and_test_a_frame success");
         }
+
+        // 释放main函数中的资源
+        free_and_set_null(s_in->addr_in);
+        free_and_set_null(s_in);
+
         unset_lock_used_flag(data_locked);
 
-        close(old_socket);
+        zlog_info(log_all, "close the socket No: %d", socket_tmp);
+        close(socket_tmp);
     }
 }
 
@@ -148,7 +154,7 @@ void *handle_recv_data(void *arg){
         zlog_info(log_all, "handle thread get the sem");
 
         info_between_thread *info;
-        ring_queue_out_with_lock(&queue_frame, (ptr_ring_queue_t)&info);
+        ring_queue_out_with_sem(&queue_frame, (ptr_ring_queue_t)&info);
 
         buff_t *buf = info->buf;
 
@@ -198,13 +204,14 @@ void *handle_recv_data(void *arg){
 
             // 收到的文件信息入队
             zlog_info(log_all, "FILE_NAME: %s", fileName);
-            zlog_info(log_all, "ip addr: %s", inet_ntoa(info->s_in->addr_in->sin_addr));
+            // 释放的sin非法使用
+            zlog_info(log_all, "ip addr: %s", info->client_addr);
             
-            FileInfoPtr file_info_ptr = file_info_init(fileName, inet_ntoa(info->s_in->addr_in->sin_addr));
+            FileInfoPtr file_info_ptr = file_info_init(fileName, info->client_addr);
             file_info_ptr->fp = fp;
 
             unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
-            zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, inet_ntoa(info->s_in->addr_in->sin_addr));
+            zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, info->client_addr);
 
             if(err == RQ_ERR_BUFFER_FULL){
                 // 如果队伍满了，输出丢弃文件的日志
@@ -213,13 +220,9 @@ void *handle_recv_data(void *arg){
                 // 增加收数据的信号量
                 sem_post(&sem_escaped_data);
             }
-
-            close(info->s_in->socket_no);
-            
-            // 释放main函数中的资源
-            free_and_set_null(info->s_in->addr_in);
-            free_and_set_null(info->s_in);
         }
+        free_and_set_null(info->client_addr);
+        free_and_set_null(info);
     }
 }
 
@@ -289,7 +292,7 @@ int main(int argc, char const *argv[]){
 
     uint8_t err;
     RingQueueInit(&queue_recv.queue, queue_recv_buf, QUEUE_LEN, &err);
-    RingQueueInit(&queue_frame.queue, queue_frame_buf, QUEUE_FRAME_LEN, &err);
+    RingQueueInit_with_sem(&queue_frame, queue_frame_buf, QUEUE_FRAME_LEN);
 
     // 线程初始化
     int client_st;
@@ -312,7 +315,8 @@ int main(int argc, char const *argv[]){
 
     while(1){
         // client_addr 需要free
-        struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+        struct sockaddr_in *client_addr = (struct sockaddr_in *)malloc_print_addr(sizeof(struct sockaddr_in));
+        zlog_info(log_all, "struct sockaddr_in *client_addr %p", client_addr);
 
         client_st = accept(st, (struct sockaddr *)client_addr, &sockaddr_Len);
         if(client_st == -1){
@@ -325,7 +329,9 @@ int main(int argc, char const *argv[]){
         zlog_info(log_all, "recv from %s", inet_ntoa(client_addr->sin_addr));
 
         // client_info 需要free
-        struct socket_info *client_info = (struct socket_info *)malloc(sizeof(struct socket_info));
+        // 内存泄露
+        struct socket_info *client_info = (struct socket_info *)malloc_print_addr(sizeof(struct socket_info));
+        zlog_info(log_all, "struct socket_info *client_info %p", client_info);
         client_info->socket_no = client_st;
         client_info->addr_in = client_addr;
 
