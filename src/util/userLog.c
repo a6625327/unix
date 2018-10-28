@@ -18,9 +18,6 @@ int log_init(zlog_category_t **ret_log_cat, const char *log_cat_str,const char *
 
     log_cat = zlog_get_category(log_cat_str);
 
-    // log_all = zlog_get_category("log_all");
-    // log_recv_test = zlog_get_category("log_recv_test");
-    // log_send_test = zlog_get_category("log_send_test");
     log_discard_file = zlog_get_category("log_discard_file");
 
     if(!log_cat){

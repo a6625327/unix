@@ -11,7 +11,7 @@ zlog_category_t *log_cat;
 // zlog_category_t *log_send_test;
 zlog_category_t *log_discard_file;
 
-#define LOG_FUN           zlog_info(log_cat, "===== IN FUNCTION: [%s()] =====", __FUNCTION__)
+#define LOG_FUN           zlog_debug(log_cat, "===== IN FUNCTION: [%s()] =====", __FUNCTION__)
 
 int log_init(zlog_category_t **ret_log_cat, const char *log_cat_str,const char *path);
 void destory_log();

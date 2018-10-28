@@ -72,12 +72,11 @@ int8_t send_test(const char *file_path, const char *ip, const int port){
         init_frame(&f, buf, fread_len);
         f.type = 0xA3;
         size_t f_size = get_frame_size(&f);
-
+        f.crc = calculate_frame_crc(f);
         int8_t send_ret = send_frame(ct, &f);
         if(send_ret != 0){
             zlog_error(log_send_test, "send_frame error");
         }
-
         free_and_set_null(buf);
 
         fclose_and_set_null(fp);

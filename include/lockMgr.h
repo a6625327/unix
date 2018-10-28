@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define MAX_THREAD_COUNT 1
 #define LOCK_NUM 5
 
 /*

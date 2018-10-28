@@ -10,7 +10,7 @@ int8_t escaper(void *data, const size_t escap_num, void **ret_data, size_t *ret_
 	uint8_t *tem_buf_p = tem_buf;
 	if(tem_buf == NULL){
 		zlog_error(log_cat, "tem_buf malloc error, error msg: %s", strerror(errno));
-		return -2;
+		return -1;
 	}
 
 	uint8_t  *databuf = (uint8_t *)data;

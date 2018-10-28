@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <semaphore.h>
+#include "common.h"
 /*
 ********************************************************************************************
 *                                   MISCELLANEOUS
@@ -85,7 +86,7 @@ typedef void* ring_queue_t;
 typedef ring_queue_t* ptr_ring_queue_t;
 
 typedef struct {
-    unsigned short  ring_buf_of_cnt;                /* Number of characters in the ring buffer currently */
+    unsigned short  ring_buf_of_cnt;                /* Number of elements in the ring buffer currently */
     unsigned short  ring_buf_size;                  /* Ring buffer Size (per buffer) */    
     ptr_ring_queue_t ring_buf_in_ptr;               /* Pointer to where next character will be inserted */  
     ptr_ring_queue_t ring_buf_out_ptr;              /* Pointer from where next character will be extracted */  
@@ -106,6 +107,7 @@ typedef struct{
     sem_t queue_full_num;
     sem_t queue_empty_num;
     ring_queue queue;
+    pthread_mutex_t queue_lock;
 } ring_queue_with_sem;
 /*
 *********************************************************************************************************
@@ -122,6 +124,7 @@ unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_
 unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t outData);
 
 ring_queue_with_sem* RingQueueInit_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t pbuf, unsigned short bufSize);
+ring_queue_with_lock* RingQueueInit_with_lock(ring_queue_with_lock *ptr_queue_with_lock, ptr_ring_queue_t pbuf, unsigned short bufSize);
 void ring_queue_in_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t *inData);
 void ring_queue_out_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t outData);
 

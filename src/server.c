@@ -3,13 +3,17 @@
 
 // 收发文件队列长度
 #ifndef QUEUE_LEN
-#define QUEUE_LEN 2
+#define QUEUE_LEN 5
 #endif // !QUEUE_LEN
 
 // 转义帧队列长度
 #ifndef QUEUE_FRAME_LEN
-#define QUEUE_FRAME_LEN 64
+#define QUEUE_FRAME_LEN 5
 #endif // !QUEUE_FRAME_LEN
+
+// #ifndef MAX_THREAD_COUNT
+#define MAX_THREAD_COUNT 6
+// #endif // !MAX_THREAD_COUNT
 
 /*========== 函数声明 =================*/
 void discard_file(FileInfoPtr discard_file_info);
@@ -23,22 +27,12 @@ ring_queue_with_sem queue_frame;
 
 /* 
 ** sem_socket_accept： 有客户端请求时，增加该信号量
-** sem_recv_data:      从客户端来的数据接收完成后，增加改信号量
 ** sem_escaped_data:   从客户端来的数据接反转义完成后，增加改信号量
 ** sem_send_data：     暂留信号量
 */
 sem_t sem_socket_accept;
-sem_t sem_recv_data;
 sem_t sem_escaped_data;
 sem_t sem_send_data;
-
-// typedef struct{
-//     /* 
-//     ** sem_frame_num:     意为收到一个完整的帧
-//     */
-//     sem_t sem_frame_num;
-
-// };
 
 
 // 处理接受数据以及发送数据的线程，各三个
@@ -54,6 +48,9 @@ pthread_t thr_recv[MAX_THREAD_COUNT];
  返回值    :  void
 *****************************************************************************/
 void discard_file(FileInfoPtr discard_file_info){
+    LOG_FUN;
+
+    zlog_error(log_all, "fileName ptr: %p", &discard_file_info->file_name);
     zlog_error(log_all, "the file is discard, fileName: %s", discard_file_info->file_name);
 
     zlog_error(log_discard_file, "============== the file that is discard: ==============");
@@ -67,43 +64,57 @@ void discard_file(FileInfoPtr discard_file_info){
     file_info_destory(discard_file_info);
 }
 
-int send_cnt = 0;
+size_t send_cnt = 0;
 void *send_thread(void *arg){
     LOG_FUN;
     while(1){
-        sem_wait(&sem_escaped_data);
         // ***f_info->fp不好一直打开
-        // struct socket_info *s_in = arg;
+        if(0 != sem_wait_and_perror(&sem_escaped_data)){
+            continue;
+        }
         FileInfoPtr f_info;
-        // FILE *fp;
 
         int st;
         int ret = clientInit(&st, CONF.dest_ip, CONF.dest_port);
 
         if(ret < 0){
             zlog_error(log_all, "the clientInit FAIL, the ret: %d", ret);
+            sleep(8);
+            // 因为没有成功连接到需要发送帧的服务器，所以归还该信号量，使之与队列长度一致
+            sem_post(&sem_escaped_data);
             continue;
         }else{
             // I can add the lock in the c src file
             ring_queue_out_with_lock(&queue_recv, (ptr_ring_queue_t)&f_info);
-            zlog_info(log_all, "QUEUE out data:%s -- %s", f_info->file_name, f_info->src_dev_ip);
+            zlog_debug(log_all, "QUEUE out data:%s -- %s", f_info->file_name, f_info->src_dev_ip);
             
             zlog_info(log_all, "clien's socket No: %d", st);
 
-            int writeRet;
-            if((writeRet = serv_write_to_socket(st, f_info->fp)) == -1){
-                zlog_error(log_all, "send error, ret: %d; Error Msg: %s", writeRet, strerror(errno));
-            }
-
-            if(writeRet == -1){
-                fclose_and_set_null(f_info->fp);
+            uint8_t *file_buf;
+            size_t file_len;
+            uint8_t read_ret = read_buff_from_file(f_info->fp, &file_buf, &file_len);
+            if(read_ret != 0){
+                zlog_error(log_all, "read file fail, file info:");
+                print_error_fileinfo_struct(f_info);
             }else{
-                zlog_info(log_all, "FileName: %s; File ptr: %p send SUCCESS!" , f_info->file_name, f_info->fp);
-                zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
-                file_info_destory(f_info);
+                frame_t f;
+                init_frame(&f, file_buf, file_len);
+
+                f.type = 0xA3;
+                size_t frame_size = get_frame_size(&f);
+
+                int8_t send_ret = send_frame(st, &f);
+                if(send_ret != 0){
+                    zlog_error(log_all, "some file send fail, file info:");
+                    print_error_fileinfo_struct(f_info);
+                }else{
+                    zlog_info(log_all, "FileName: %s; File ptr: %p send successfully, the send cnt: %ld" , f_info->file_name, f_info->fp, send_cnt);
+                    send_cnt++;
+                }
             }
-            send_cnt++;
-            zlog_info(log_all, "the serv send cnt: %d", send_cnt);
+            free_and_set_null(file_buf);
+            zlog_info(log_all, "unlink the fileName: %s; File ptr: %p" , f_info->file_name, f_info->fp);
+            file_info_destory(f_info);
         }
         close(st);
     }
@@ -113,7 +124,7 @@ void *recv_thread(void *arg){
     LOG_FUN;
     // pthread_detach(pthread_self());
     while(1){
-        sem_wait(&sem_socket_accept);
+        sem_wait_and_perror(&sem_socket_accept);
 
         struct thread_lock *data_locked = get_pending_lock();
         if(data_locked == NULL){
@@ -127,7 +138,7 @@ void *recv_thread(void *arg){
         zlog_info(log_all, "--- the %ld get the sem, the info: ---", pthread_self());
         zlog_info(log_all, "--- get the lock No: %d, the use_flag: %d---", data_locked->lock_no, data_locked->proce_status);
 
-        int8_t recv_status = recv_from_socket_and_test_a_frame(s_in, &sem_recv_data, &queue_frame);
+        int8_t recv_status = recv_from_socket_and_test_a_frame(s_in, &queue_frame);
         if(recv_status != 0){
             zlog_error(log_all, "recv_from_socket_and_test_a_frame error, recv_status: %d",recv_status);
         }else{
@@ -150,14 +161,11 @@ void *handle_recv_data(void *arg){
     LOG_FUN;
     // pthread_detach(pthread_self());
     while(1){
-        sem_wait(&sem_recv_data);
-        zlog_info(log_all, "handle thread get the sem");
-
-        info_between_thread *info;
+        info_between_thread *info = NULL;
         ring_queue_out_with_sem(&queue_frame, (ptr_ring_queue_t)&info);
 
         buff_t *buf = info->buf;
-
+        
         uint8_t *unescape_data;
         size_t unescape_data_len;
 
@@ -172,55 +180,63 @@ void *handle_recv_data(void *arg){
         frame_t recv_frame;
         switch_buff2frame_struct(unescape_data, unescape_data_len, &recv_frame);
         free_and_set_null(unescape_data);
-
-        // 范文件传输
-        if(recv_frame.type == 0xA3){
-            // 如果环形缓冲区满了，那么就要进行相应操作，此处丢弃缓冲区头部的文件
-            FileInfoPtr discard_file_info = NULL;
-
-            int fd;
-            char fileName[] = "tmpFile_XXXXXX";
-
-            if((fd = mkstemp(fileName)) == -1){   
-                zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
-                continue;
-            }
-            FILE *fp = fdopen(fd, "wb+");
-            if(fp == NULL){
-                zlog_error(log_all, "fdopen fail, err msg: %s", strerror(errno));
-                continue;
-            }
-
-            size_t ret = fwrite(recv_frame.data, sizeof(uint8_t), recv_frame.data_len, fp);
-            if(ret != recv_frame.data_len){
-                zlog_error(log_all, "handle_recv_data fwrite error, msg: %s", strerror(errno));
-                fclose_and_set_null(fp);
-                free_and_set_null(recv_frame.data);
-                continue;
-            }
-            fflush(fp);
+        uint16_t crc = calculate_frame_crc(recv_frame);
+        if(crc != recv_frame.crc){
+            zlog_error(log_all, "crc验证错误");
             free_and_set_null(recv_frame.data);
+        }else{
+            // 范文件传输
+            if(recv_frame.type == 0xA3){
+                // 如果环形缓冲区满了，那么就要进行相应操作，此处丢弃缓冲区头部的文件
+                zlog_debug(log_all, "crc验证通过");
+                
+                FileInfoPtr discard_file_info = NULL;
+
+                int fd;
+                char fileName[] = "tmpFile_XXXXXX";
+
+                if((fd = mkstemp(fileName)) == -1){   
+                    zlog_error(log_all, "Creat temp file faile: %s", strerror(errno));
+                    continue;
+                }
+                FILE *fp = fdopen(fd, "wb+");
+                if(fp == NULL){
+                    zlog_error(log_all, "fdopen fail, err msg: %s", strerror(errno));
+                    continue;
+                }
+
+                size_t ret = fwrite(recv_frame.data, sizeof(uint8_t), recv_frame.data_len, fp);
+                if(ret != recv_frame.data_len){
+                    zlog_error(log_all, "handle_recv_data fwrite error, msg: %s", strerror(errno));
+                    fclose_and_set_null(fp);
+                    free_and_set_null(recv_frame.data);
+                    continue;
+                }
+                fflush(fp);
+                free_and_set_null(recv_frame.data);
 
 
-            // 收到的文件信息入队
-            zlog_info(log_all, "FILE_NAME: %s", fileName);
-            // 释放的sin非法使用
-            zlog_info(log_all, "ip addr: %s", info->client_addr);
-            
-            FileInfoPtr file_info_ptr = file_info_init(fileName, info->client_addr);
-            file_info_ptr->fp = fp;
+                // 收到的文件信息入队
+                zlog_info(log_all, "FILE_NAME: %s", fileName);
+                // 释放的sin非法使用
+                zlog_info(log_all, "ip addr: %s", info->client_addr);
+                
+                FileInfoPtr file_info_ptr = file_info_init(fileName, info->client_addr);
+                file_info_ptr->fp = fp;
 
-            unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
-            zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, info->client_addr);
+                unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
+                zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, info->client_addr);
 
-            if(err == RQ_ERR_BUFFER_FULL){
-                // 如果队伍满了，输出丢弃文件的日志
-                discard_file(discard_file_info);
-            }else{
-                // 增加收数据的信号量
-                sem_post(&sem_escaped_data);
+                if(err == RQ_ERR_BUFFER_FULL){
+                    // 如果队伍满了，输出丢弃文件的日志
+                    discard_file(discard_file_info);
+                }else{
+                    // 增加收数据的信号量
+                    sem_post_and_perror(&sem_escaped_data);
+                }
             }
         }
+        
         free_and_set_null(info->client_addr);
         free_and_set_null(info);
     }
@@ -257,10 +273,6 @@ void user_sem_init(){
         zlog_error(log_all, "Semaphore sem_socket_accept init fail!");
         exit(-1);
     }
-    if(-1 == sem_init(&sem_recv_data, 0, 0)){
-        zlog_error(log_all, "Semaphore sem_recv_data init fail!");
-        exit(-1);
-    }
     if(-1 == sem_init(&sem_send_data, 0, 0)){
         zlog_error(log_all, "Semaphore sem_send_data init fail!");
         exit(-1);
@@ -291,7 +303,7 @@ int main(int argc, char const *argv[]){
     
 
     uint8_t err;
-    RingQueueInit(&queue_recv.queue, queue_recv_buf, QUEUE_LEN, &err);
+    RingQueueInit_with_lock(&queue_recv, queue_recv_buf, QUEUE_LEN);
     RingQueueInit_with_sem(&queue_frame, queue_frame_buf, QUEUE_FRAME_LEN);
 
     // 线程初始化
@@ -349,6 +361,6 @@ int main(int argc, char const *argv[]){
 
         set_lock_pending_flag(data_locked);
         // set_lock_pending_flag(data_locked);
-        sem_post(&sem_socket_accept);
+        sem_post_and_perror(&sem_socket_accept);
     }
 }

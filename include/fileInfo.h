@@ -19,7 +19,7 @@ typedef FileInfo* FileInfoPtr;
 
 FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
     LOG_FUN;
-    // p需要 free
+    
     FileInfoPtr p = (FileInfoPtr)malloc_print_addr(sizeof(FileInfo));
     zlog_info(log_cat, "FileInfoPtr p %p", p);
     if(p == NULL){
@@ -36,6 +36,26 @@ FileInfoPtr file_info_init(const char *fileName, const char *src_ip){
     p->file_name = strdup(fileName);
 
     return p;
+}
+
+void print_fileinfo_struct(FileInfoPtr f_info){
+    zlog_info(log_cat, "=================== the file info : ===================");
+    zlog_info(log_cat, "fileName: %s", f_info->file_name);
+    zlog_info(log_cat, "time: %ld", f_info->time);
+    zlog_info(log_cat, "upload_flag: %c", f_info->upload_flag);
+    zlog_info(log_cat, "src_ip: %s", f_info->src_dev_ip);
+    zlog_info(log_cat, "save_path: %s", f_info->save_path);
+    zlog_info(log_cat, "=======================================================\n");
+}
+
+void print_error_fileinfo_struct(FileInfoPtr f_info){
+    zlog_error(log_cat, "=================== the file info : ===================");
+    zlog_error(log_cat, "fileName: %s", f_info->file_name);
+    zlog_error(log_cat, "time: %ld", f_info->time);
+    zlog_error(log_cat, "upload_flag: %c", f_info->upload_flag);
+    zlog_error(log_cat, "src_ip: %s", f_info->src_dev_ip);
+    zlog_error(log_cat, "save_path: %s", f_info->save_path);
+    zlog_error(log_cat, "=======================================================\n");
 }
 
 void file_info_destory(FileInfoPtr p){

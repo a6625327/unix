@@ -60,6 +60,7 @@ void copy_data(uint8_t **dest, uint8_t *src, size_t len){
 int8_t send_frame(int st, frame_t *f){
     LOG_FUN;
 
+    int8_t oprator_val = 0;
     size_t frame_t_len = get_frame_size(f);
 
     // origin指原始数据，未经过转义处理, f_buf_origin需要free
@@ -67,8 +68,11 @@ int8_t send_frame(int st, frame_t *f){
     uint8_t *f_buf_origin_p = f_buf_origin;
     if(f_buf_origin == NULL){
 		zlog_error(log_cat, "send_frame malloc error, error msg: %s", strerror(errno));
-		return -1;
+        oprator_val = -1;
+		return oprator_val;
 	}
+
+    f->crc = calculate_frame_crc(*f);
 
     // 开始复制帧内容到buf里
     copy_data(&f_buf_origin_p, (uint8_t *)&f->head, sizeof(f->head));
@@ -83,16 +87,20 @@ int8_t send_frame(int st, frame_t *f){
     // handled指被处理过的数据，已经过转义处理
     uint8_t *f_buf_handled;
     size_t ret_num;
-    escaper(f_buf_origin, frame_t_len, (void *)&f_buf_handled, &ret_num);
-    
-
+    if(escaper(f_buf_origin, frame_t_len, (void *)&f_buf_handled, &ret_num) != 0){
+        zlog_error(log_cat, "send_frame()->escaper() fail");
+        oprator_val = -2;
+    }else{
+        size_t write_ret = write_buff_to_socket(st, f_buf_handled, ret_num);
+        if(write_ret != ret_num){
+            zlog_error(log_cat, "send_frame()->write_buff_to_socket() fail");
+            oprator_val = -3;
+        }
+        free_and_set_null(f_buf_handled);
+    }
     // 转换完成，释放资源
     free_and_set_null(f_buf_origin);
-
-    write_buff_to_socket(st, f_buf_handled, ret_num);
     
-    // 转换完成，释放资源
-    free_and_set_null(f_buf_handled);
     return 0;
 }
 
@@ -217,7 +225,7 @@ int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f){
     f->type = tmp->type;
     f->data_len = tmp->data_len;
     f->data = malloc_print_addr(tmp->data_len);
-    zlog_info(log_cat, "f->data %p, sitch cnt: %d", f->data, tmp->data_len);
+    zlog_debug(log_cat, "f->data %p, sitch cnt: %d", f->data, tmp->data_len);
 
     if(f->data == NULL){
 		zlog_error(log_cat, "switch_buff2frame_struct malloc error, error msg: %s", strerror(errno));
@@ -253,7 +261,7 @@ int8_t add_and_test_net_frame_buff(net_frame_buff_t *f_buf, void *data, size_t d
             -4：recv报错，但是已经成功接收过起码一个帧
             -5：recv报错，并且没成功接收过一个帧
 *****************************************************************************/
-int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, ring_queue_with_sem *queue){
+int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, ring_queue_with_sem *queue){
     LOG_FUN;
 
     char buf[BUFF_SIZE] = {0};
@@ -286,7 +294,7 @@ int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, r
             break;
         }
         net_frame_buff->net_buff = init_buffer(BUFF_SIZE);
-        zlog_info(log_cat, "net_frame_buff->net_buff %p", net_frame_buff->net_buff);
+        zlog_debug(log_cat, "net_frame_buff->net_buff %p", net_frame_buff->net_buff);
 
         recv_total += recv_ret;
         operatorFlag = add_and_test_net_frame_buff(net_frame_buff, buf, recv_ret);
@@ -294,7 +302,7 @@ int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, r
             s_in_valid = 1;
             // 内存泄露
             info_between_thread *info = malloc_print_addr(sizeof(info_between_thread));
-            zlog_info(log_cat, "info_between_thread *info %p", info);
+            zlog_debug(log_cat, "info_between_thread *info %p", info);
 
             info->client_addr = strdup(inet_ntoa(s_in->addr_in->sin_addr));
             info->buf = net_frame_buff->net_buff;
@@ -303,7 +311,6 @@ int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, r
             net_frame_buff->tail_flag = 0;
 
             ring_queue_in_with_sem(queue, (ptr_ring_queue_t *)info);
-            sem_post(sem);
 
             // 更新operatorFlag
             operatorFlag = 0;
@@ -320,3 +327,32 @@ int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, r
 
     return operatorFlag;
 }
+
+uint16_t calculate_frame_crc(frame_t f){
+    LOG_FUN;
+
+    int8_t oprator_val = 0;
+    size_t frame_t_len = get_frame_size(&f) - sizeof(f.head) - sizeof(f.tail) - sizeof(f.crc);
+
+    // origin指原始数据，未经过转义处理, f_buf_origin需要free
+    uint8_t *f_buf_origin = malloc_print_addr(frame_t_len);
+    uint8_t *f_buf_origin_p = f_buf_origin;
+    if(f_buf_origin == NULL){
+		zlog_error(log_cat, "calculate_frame_crc malloc error, error msg: %s", strerror(errno));
+        oprator_val = 1;
+		return oprator_val;
+	}
+    memset(f_buf_origin, 0, frame_t_len);
+
+    // 开始复制帧内容到buf里
+    copy_data(&f_buf_origin_p, (uint8_t *)&f.frame_series_num, sizeof(f.frame_series_num));
+    copy_data(&f_buf_origin_p, (uint8_t *)&f.terminal_no, sizeof(f.terminal_no));
+    copy_data(&f_buf_origin_p, (uint8_t *)&f.type, sizeof(f.type));
+    copy_data(&f_buf_origin_p, (uint8_t *)&f.data_len, sizeof(f.data_len));
+    copy_data(&f_buf_origin_p, (uint8_t *)f.data, f.data_len);
+    
+    uint16_t crc = crc16(f_buf_origin, frame_t_len);
+    free_and_set_null(f_buf_origin);
+
+    return crc;
+}   

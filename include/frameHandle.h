@@ -70,10 +70,12 @@ int8_t test_net_frame_buff(net_frame_buff_t *f_buf);
 
 int8_t add_and_test_net_frame_buff(net_frame_buff_t *f_buf, void *data, size_t data_len);
 
-int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, sem_t *sem, ring_queue_with_sem *queue);
+int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, ring_queue_with_sem *queue);
 
 int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f);
 
 void free_net_frame_buff(net_frame_buff_t *f_buf);
+
+uint16_t calculate_frame_crc(frame_t t);
 
 #endif // !__FRAMEHANDLE_H__
