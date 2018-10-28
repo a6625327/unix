@@ -71,7 +71,7 @@ int8_t unescaper(void *data, const size_t unescap_num, void **ret_data, size_t *
 	uint8_t  *databuf = (uint8_t *)data;
 	if(tem_buf == NULL){
 		zlog_error(log_cat, "tem_buf malloc error, error msg: %s", strerror(errno));
-		return -2;
+		return -1;
 	}
 
 	uint16_t unescap_cnt = 0;
