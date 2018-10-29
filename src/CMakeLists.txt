@@ -31,7 +31,6 @@ add_executable(serv server.c $<TARGET_OBJECTS:obj>)
 add_executable(recv recv.c   $<TARGET_OBJECTS:obj>)
 add_executable(send send.c   $<TARGET_OBJECTS:obj>)
 # add_executable(ttt ttt.c     $<TARGET_OBJECTS:obj>)
-# add_executable(ddd ddd.c)
 
 # 将所有可执行程序链接动态库
 foreach(item ${EXEC_BIN})

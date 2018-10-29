@@ -63,7 +63,7 @@ void recv_test(const char *ip, const int port){
             int8_t operatorFlag = add_and_test_net_frame_buff(net_frame_buff, buf, recv_ret);
             if(operatorFlag == 0){
                 zlog_info(log_recv_test, "we have get a frame");
-                hzlog_info(log_recv_test, net_frame_buff->net_buff->buf, net_frame_buff->net_buff->buf_num);
+                hzlog_debug(log_recv_test, net_frame_buff->net_buff->buf, net_frame_buff->net_buff->buf_num);
                 cnt++;
                 operatorFlag = 0;
 
@@ -88,6 +88,7 @@ void recv_test(const char *ip, const int port){
                     zlog_debug(log_recv_test, "crc验证通过");
                 }
                 free_and_set_null(recv_frame.data);
+                zlog_info(log_recv_test, "成功收取次数 %d", cnt);
             }else{
                 continue;
             }

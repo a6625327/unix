@@ -11,9 +11,9 @@
 #define QUEUE_FRAME_LEN 5
 #endif // !QUEUE_FRAME_LEN
 
-// #ifndef MAX_THREAD_COUNT
-#define MAX_THREAD_COUNT 6
-// #endif // !MAX_THREAD_COUNT
+#ifndef MAX_THREAD_COUNT
+#define MAX_THREAD_COUNT 10
+#endif // !MAX_THREAD_COUNT
 
 /*========== 函数声明 =================*/
 void discard_file(FileInfoPtr discard_file_info);
@@ -24,6 +24,9 @@ zlog_category_t *log_all;
 ring_queue_with_lock queue_recv;
 ring_queue_with_sem queue_frame;
 
+// 队列缓存
+static ring_queue_t queue_recv_buf[QUEUE_LEN];
+static ring_queue_t queue_frame_buf[QUEUE_FRAME_LEN];
 
 /* 
 ** sem_socket_accept： 有客户端请求时，增加该信号量
@@ -218,13 +221,12 @@ void *handle_recv_data(void *arg){
 
                 // 收到的文件信息入队
                 zlog_info(log_all, "FILE_NAME: %s", fileName);
-                // 释放的sin非法使用
                 zlog_info(log_all, "ip addr: %s", info->client_addr);
                 
                 FileInfoPtr file_info_ptr = file_info_init(fileName, info->client_addr);
                 file_info_ptr->fp = fp;
 
-                unsigned char err = ring_queue_in_with_lock(&queue_recv, (ptr_ring_queue_t *)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
+                unsigned char err = ring_queue_in_with_lock(&queue_recv, (ring_queue_t)file_info_ptr, (ptr_ring_queue_t)&discard_file_info);
                 zlog_info(log_all, "QUEUE in data:%s -- %s", fileName, info->client_addr);
 
                 if(err == RQ_ERR_BUFFER_FULL){
@@ -298,10 +300,6 @@ int main(int argc, char const *argv[]){
     user_sem_init();
     
     // 队列初始化
-    static ring_queue_t queue_recv_buf[QUEUE_LEN];
-    static ring_queue_t queue_frame_buf[QUEUE_FRAME_LEN];
-    
-
     uint8_t err;
     RingQueueInit_with_lock(&queue_recv, queue_recv_buf, QUEUE_LEN);
     RingQueueInit_with_sem(&queue_frame, queue_frame_buf, QUEUE_FRAME_LEN);
@@ -335,13 +333,12 @@ int main(int argc, char const *argv[]){
             zlog_error(log_all, "accept failed ! error message :%s", strerror(errno));
             refuse_cnt++;
             zlog_info(log_all, "serv refuse cnt: %d", refuse_cnt);
+            free_and_set_null(client_addr);
             continue;
         } 
 
         zlog_info(log_all, "recv from %s", inet_ntoa(client_addr->sin_addr));
 
-        // client_info 需要free
-        // 内存泄露
         struct socket_info *client_info = (struct socket_info *)malloc_print_addr(sizeof(struct socket_info));
         zlog_info(log_all, "struct socket_info *client_info %p", client_info);
         client_info->socket_no = client_st;
@@ -354,6 +351,8 @@ int main(int argc, char const *argv[]){
             close(client_st);
             no_free_lock_cnt++;
             zlog_info(log_all, "serv no_free_lock cnt: %d", no_free_lock_cnt);
+            free_and_set_null(client_addr);
+            free_and_set_null(client_info);
             continue;
         }
         

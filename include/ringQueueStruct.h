@@ -120,13 +120,13 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
 ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr);
 short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned short len);
 void RingQueueClear(ring_queue *ptr_queue);
-unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t *data, ptr_ring_queue_t discard_file_info);
-unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t outData);
+unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ring_queue_t inData, ring_queue_t *discard_file_info);
+unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ring_queue_t *outData);
 
 ring_queue_with_sem* RingQueueInit_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t pbuf, unsigned short bufSize);
 ring_queue_with_lock* RingQueueInit_with_lock(ring_queue_with_lock *ptr_queue_with_lock, ptr_ring_queue_t pbuf, unsigned short bufSize);
-void ring_queue_in_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t *inData);
-void ring_queue_out_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t outData);
+void ring_queue_in_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ring_queue_t inData);
+void ring_queue_out_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ring_queue_t *outData);
 
 /*
 *********************************************************************************************************

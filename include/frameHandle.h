@@ -42,6 +42,9 @@ typedef struct{
     uint8_t head_flag;
     uint8_t tail_flag;
     buff_t *net_buff;
+    uint16_t head_position;
+    uint16_t tail_position;
+    uint16_t search_position;
 }net_frame_buff_t;
 
 typedef struct{
@@ -56,11 +59,12 @@ typedef struct{
 
 void get_series_num(frame_t *f);
 
+
 void set_all_zero_frame(frame_t *f);
 void init_frame(frame_t *f, void *buf, size_t buf_len);
 
 int8_t send_frame(int st, frame_t *f);
-int8_t recv_frame(int st, frame_t *f);
+// int8_t recv_frame(int st, frame_t *f);
 
 size_t get_frame_size(frame_t *f);
 
@@ -77,5 +81,9 @@ int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f);
 void free_net_frame_buff(net_frame_buff_t *f_buf);
 
 uint16_t calculate_frame_crc(frame_t t);
+
+void reset_net_frame_buff(net_frame_buff_t *net_frame_buff);
+
+uint16_t get_relative_position(uint8_t *base_addr, uint8_t *byte_addr);
 
 #endif // !__FRAMEHANDLE_H__

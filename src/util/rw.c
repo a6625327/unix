@@ -73,7 +73,7 @@ size_t write_buff_to_socket(int st, uint8_t *buf, size_t len){
         return send_ret;
     }
     zlog_info(log_cat, "send success, serv send cnt: %d", send_ret);
-    hzlog_info(log_cat, buf, send_ret);
+    hzlog_debug(log_cat, buf, send_ret);
 
     return send_ret;
 }
@@ -104,7 +104,7 @@ size_t write_buff_to_socket(int st, uint8_t *buf, size_t len){
 //         send_ret = send(st, buf, send_len, 0);
         
 //         zlog_info(log_cat, "serv send cnt: %d", send_ret);
-//         hzlog_info(log_cat, buf, send_ret);
+//         hzlog_debug(log_cat, buf, send_ret);
 //     }
 
 //     zlog_info(log_cat, "serv serv_send_thread()  send() success!");
@@ -157,7 +157,7 @@ size_t write_buff_to_socket(int st, uint8_t *buf, size_t len){
 //             break;
 //         }
 //         zlog_info(log_cat, "write Count: %d", writeCnt);
-//         hzlog_info(log_cat, buf, writeCnt);
+//         hzlog_debug(log_cat, buf, writeCnt);
 //     }
 //     fflush(fp);
 

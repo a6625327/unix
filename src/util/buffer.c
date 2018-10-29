@@ -20,7 +20,6 @@ buff_t *init_buffer(size_t buf_size){
         zlog_error(log_cat, "init_buffer fail, error msg: %s", strerror(errno));
         return NULL;
     }
-    memset(buf, 0, sizeof(buff_t));
     buf->No = get_buff_num();
     buf->buf = malloc_print_addr((buf_size + PRESERVE_SIZE)* sizeof(uint8_t));
     
@@ -28,7 +27,6 @@ buff_t *init_buffer(size_t buf_size){
         zlog_error(log_cat, "init_buffer fail, error msg: %s", strerror(errno));
         return NULL;
     }
-    memset(buf->buf, 0, (buf_size + PRESERVE_SIZE)* sizeof(uint8_t));
     buf->capacity = buf_size + PRESERVE_SIZE;
     buf->buf_num = 0;
     return buf;
@@ -40,10 +38,10 @@ int8_t append_buffer(buff_t *buf, void *data, size_t len_of_data){
         return 0;
     }
     
-    if(len_of_data + (buf->buf_num) > buf->capacity){
+    if((len_of_data + buf->buf_num) > buf->capacity){
         zlog_notice(log_cat, "the buffur is not enought to hold the data, num: %ld, data_len: %ld, capacity: %ld", buf->buf_num, len_of_data, buf->capacity);
-        buf->buf = realloc_print_addr(buf->buf, len_of_data + buf->buf_num + PRESERVE_SIZE);
-        buf->capacity += (len_of_data + buf->buf_num + PRESERVE_SIZE);
+        buf->buf = realloc_print_addr(buf->buf, buf->capacity + len_of_data+ PRESERVE_SIZE);
+        buf->capacity += (len_of_data+ PRESERVE_SIZE);
         if(buf->buf == NULL){
             zlog_error(log_cat, "append_buffer fail, error msg: %s", strerror(errno));
             return -1;
@@ -53,6 +51,11 @@ int8_t append_buffer(buff_t *buf, void *data, size_t len_of_data){
     memcpy(buf->buf + buf->buf_num, data, len_of_data);
     buf->buf_num += len_of_data;
     return 0;
+}
+
+void reset_buffer(buff_t *buf){
+    memset(buf->buf, 0, buf->buf_num);
+    buf->buf_num = 0;
 }
 
 void free_buffer(buff_t *buf){

@@ -98,11 +98,15 @@ void fclose_and_set_null(FILE *__straem){
 
 void *malloc_print_addr(size_t size){
     void *__p = malloc(size);
+    if(__p != NULL){
+        memset(__p, 0, size);
+    }
     zlog_debug(log_cat, "the addr malloc is %p", __p);
     return __p;
 }
 
 void *realloc_print_addr(void *__ptr, size_t size){
+    zlog_debug(log_cat, "new size: %ld", size);
     void *old_ptr = __ptr;
     __ptr = realloc(__ptr, size);
     zlog_debug(log_cat, "old ptr %p, new ptr %p", old_ptr, __ptr);

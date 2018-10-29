@@ -100,8 +100,8 @@ int8_t unescaper(void *data, const size_t unescap_num, void **ret_data, size_t *
 	*ret_data = tem_buf;
 	*ret_data_num = unescap_num - unescape_str_cnt;
 
-    zlog_info(log_cat, "unescap cnt: %ld", unescap_num);
-	hzlog_info(log_cat, tem_buf, *ret_data_num);
+    zlog_info(log_cat, "字符数: %ld， 转义结果：", unescap_num);
+	hzlog_debug(log_cat, tem_buf, *ret_data_num);
 	
 	return 0;
 }

@@ -51,29 +51,24 @@ pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 *********************************************************************************************************
 */
 // 内部使用，给定将给定指针在环形缓冲区内向前移动一步(到尾了会移回头)
-static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t* pPointer);
+static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t *pPointer);
 
-void ring_queue_in_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t *inData){
+void ring_queue_in_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ring_queue_t inData){
     unsigned char err;
     sem_wait_and_perror(&ptr_queue_with_sem->queue_empty_num);
     pthread_mutex_lock(&ptr_queue_with_sem->queue_lock);
-    RingQueueIn(&ptr_queue_with_sem->queue, (ptr_ring_queue_t)inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, NULL);
+    RingQueueIn(&ptr_queue_with_sem->queue, inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, NULL);
     pthread_mutex_unlock(&ptr_queue_with_sem->queue_lock);
     sem_post_and_perror(&ptr_queue_with_sem->queue_full_num);
 }
 
-void ring_queue_out_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ptr_ring_queue_t outData){
+void ring_queue_out_with_sem(ring_queue_with_sem *ptr_queue_with_sem, ring_queue_t *outData){
     unsigned char err;
     sem_wait_and_perror(&ptr_queue_with_sem->queue_full_num);
     pthread_mutex_lock(&ptr_queue_with_sem->queue_lock);
 
     *outData = (ring_queue_t)RingQueueOut(&ptr_queue_with_sem->queue, &err);
-    // if(*outData == NULL){
-    //     i = 1;
-    // }
-    // if(((info_between_thread *)(*outData))->buf == NULL ){
-    //     i = 1;
-    // }
+
     pthread_mutex_unlock(&ptr_queue_with_sem->queue_lock);
     sem_post_and_perror(&ptr_queue_with_sem->queue_empty_num);
 }
@@ -105,21 +100,23 @@ ring_queue_with_lock* RingQueueInit_with_lock(ring_queue_with_lock *ptr_queue_wi
     return ptr_queue_with_lock;
 }
 
-unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t *inData, ptr_ring_queue_t discard_file_info){
+unsigned char ring_queue_in_with_lock(ring_queue_with_lock *ptr_queue, ring_queue_t inData, ring_queue_t *discard_file_info){
     unsigned char err;
 
     pthread_mutex_lock(&ptr_queue->queue_lock);
-    RingQueueIn(&ptr_queue->queue, (ptr_ring_queue_t)inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, discard_file_info);
+    RingQueueIn(&ptr_queue->queue, inData, RQ_OPTION_WHEN_FULL_DISCARD_FIRST, &err, discard_file_info);
     pthread_mutex_unlock(&ptr_queue->queue_lock);
 
     return err;
 }
 
-unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ptr_ring_queue_t outData){
+unsigned char ring_queue_out_with_lock(ring_queue_with_lock *ptr_queue, ring_queue_t *outData){
     unsigned char err;
 
     pthread_mutex_lock(&ptr_queue->queue_lock);
+
     *outData = (ring_queue_t)RingQueueOut(&ptr_queue->queue, &err);
+
     pthread_mutex_unlock(&ptr_queue->queue_lock);
 
     return err;
@@ -189,11 +186,9 @@ ring_queue* RingQueueInit(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned
 int cnt = 0;
 int discard_cnt = 0;
 
-unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr, ptr_ring_queue_t discard_data){
+unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned char option, unsigned char *perr, ring_queue_t *discard_data){
     argCheck(ptr_queue == 0x00, RQ_ERR_POINTER_NULL, 0x00);
     cnt++;
-    zlog_debug(log_cat, "the QUEUE in Cnt: %d", cnt);
-
     if(ptr_queue->ring_buf_of_cnt >= ptr_queue->ring_buf_size){
         *perr = RQ_ERR_BUFFER_FULL;     
         
@@ -215,8 +210,9 @@ unsigned short RingQueueIn(ring_queue *ptr_queue, ring_queue_t data, unsigned ch
     }
     *ptr_queue->ring_buf_in_ptr = data;                       /* Put character into buffer                */  
     zlog_debug(log_cat, "queue in addr %p", ptr_queue->ring_buf_in_ptr);
+    zlog_debug(log_cat, "queue in element ptr %p", *ptr_queue->ring_buf_in_ptr);
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_in_ptr);      /* Wrap IN pointer                          */  
-
+    zlog_debug(log_cat, "the QUEUE in Cnt: %d", cnt);
     zlog_notice(log_cat, "now the count: %d", ptr_queue->ring_buf_of_cnt);
 
     return ptr_queue->ring_buf_of_cnt;
@@ -252,16 +248,14 @@ ring_queue_t RingQueueOut(ring_queue *ptr_queue, unsigned char *perr){
         return 0;
     }
     ptr_queue->ring_buf_of_cnt--;                                      /*  decrement character count           */  
-    data = *ptr_queue->ring_buf_out_ptr; 
-    if(data == NULL){
-        i = 1;
-    }                     /* Get character from buffer                */  
+    data = *ptr_queue->ring_buf_out_ptr;                               /* Get character from buffer                */  
     zlog_debug(log_cat, "queue out addr %p", ptr_queue->ring_buf_out_ptr);
+    zlog_debug(log_cat, "queue out element ptr %p", *ptr_queue->ring_buf_out_ptr);
     _forwardPointer(ptr_queue, &ptr_queue->ring_buf_out_ptr);        /* Wrap OUT pointer                          */  
     *perr = RQ_ERR_NONE;
 
     ring_out_cnt++;
-    zlog_info(log_cat, "the QUEUE out Cnt: %d", ring_out_cnt);
+    zlog_info(log_cat, "the queue out Cnt: %d", ring_out_cnt);
 
     return data;
 }
@@ -298,14 +292,14 @@ short RingQueueMatch(ring_queue *ptr_queue, ptr_ring_queue_t pbuf, unsigned shor
         pCurQ = pPosQ;
         pCurB = pbuf;
         while(pCurB != pEndB && *pCurQ == *pCurB) {    // compare one by one,until match all(pCurB==pEndB) or some one don't match
-            _forwardPointer(ptr_queue,&pCurQ);
+            _forwardPointer(ptr_queue, &pCurQ);
             pCurB++;
         }
         if(pCurB == pEndB){
             return Cnt;
         }                                                // if match all
         Cnt++;
-        _forwardPointer(ptr_queue,&pPosQ);
+        _forwardPointer(ptr_queue, &pPosQ);
     }
   return -1;
 }
@@ -341,12 +335,16 @@ void RingQueueClear(ring_queue *ptr_queue){
 *                                       LOCAL FUNCTION 
 *********************************************************************************************************
 */
-static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t* pPointer){
+static void _forwardPointer(ring_queue *ptr_queue, ptr_ring_queue_t *pPointer){
     LOG_FUN;
-    (*pPointer) += 1;
-    zlog_debug(log_cat, "*pPointer %p", *pPointer);
+    
+    zlog_debug(log_cat, "before forward ptr %p", *pPointer);
+    *pPointer += 1;
+    zlog_debug(log_cat, "after forward ptr %p", *pPointer);
+
     if (*pPointer == ptr_queue->ring_buf_end){
         *pPointer = ptr_queue->ring_buf;        /* Wrap OUT pointer                          */  
+        zlog_debug(log_cat, "wrap out ptr %p", *pPointer);
     }  
 }
 
