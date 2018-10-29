@@ -359,7 +359,6 @@ int main(int argc, char const *argv[]){
         data_locked->data = (void *)client_info;
 
         set_lock_pending_flag(data_locked);
-        // set_lock_pending_flag(data_locked);
         sem_post_and_perror(&sem_socket_accept);
     }
 }

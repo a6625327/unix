@@ -32,19 +32,6 @@ void init_frame(frame_t *f, void *buf, size_t buf_len){
     get_series_num(f);
 }
 
-void set_all_zero_frame(frame_t *f){
-    LOG_FUN;
-
-    f->head = 0;
-    f->frame_series_num = 0;
-    f->terminal_no = 0;
-    f->type = 0;
-    f->data_len = 0;
-    f->data = NULL;
-    f->crc = 0;
-    f->tail = 0;
-}
-
 void get_series_num(frame_t *f){
     pthread_mutex_lock(&series_num.lock);
     f->frame_series_num = series_num.series_num++;
@@ -165,14 +152,7 @@ net_frame_buff_t *init_net_frmae_buf(){
     net_frame_buff_t *f_buf = malloc_print_addr(sizeof(net_frame_buff_t));
     zlog_info(log_cat, "net_frame_buff_t *f_buf %p", f_buf);
     f_buf->net_buff = NULL;
-    // f_buf->frame = malloc(sizeof(frame_t));
 
-    // f_buf->net_buff = init_buffer(BUFF_SIZE);
-    // zlog_info(log_cat, "the buff_t addr: %p", f_buf->net_buff);
-    // if(f_buf == NULL || f_buf->net_buff == NULL){
-	// 	zlog_error(log_cat, "file_info_init malloc error, error msg: %s", strerror(errno));
-    // }
-    // set_all_zero_frame(f_buf->frame);
     f_buf->head_flag = 0;
     f_buf->tail_flag = 0;
 
@@ -192,7 +172,7 @@ int8_t add_net_frame_buf(net_frame_buff_t *f_buf, void *data, size_t data_len){
     return 0;
 }
 
-// return 0 有头有尾； -1 有头无尾； -2有尾无头; -3
+// return 0 有头有尾； -1 有头无尾； -2有尾无头; -3则检测到缓存尾部
 int8_t test_net_frame_buff(net_frame_buff_t *f_buf){
     uint8_t *head_position_ptr = NULL;
     uint8_t *tail_position_ptr = NULL;
@@ -279,6 +259,7 @@ int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f){
     // 所以需要将&tmp->data强行转为(uint8_t *)指针，这样加减操作才是一个sizeof(uint8_t)的长度，通常一个字节
     f->crc = *((uint16_t *)((uint8_t *)&tmp->data + f->data_len));
     f->tail = *((uint8_t *)((uint8_t *)&tmp->data + f->data_len + sizeof(tmp->crc)));
+    return 0;
 }
 
 
@@ -337,7 +318,6 @@ int8_t recv_from_socket_and_test_a_frame(struct socket_info *s_in, ring_queue_wi
             break;
         }else if(recv_ret == -1){
             zlog_warn(log_cat, "recv 失败 ! error message : %s", strerror(errno));
-            // -1~-3被add_and_test_net_frame_buff（）使用
             if(s_in_valid == 1){
                 operatorFlag = -4;
             }else{
@@ -428,13 +408,4 @@ uint16_t calculate_frame_crc(frame_t f){
 
 uint16_t get_relative_position(uint8_t *base_addr, uint8_t *byte_addr){
     return ((byte_addr - base_addr) / sizeof(uint8_t));
-}
-
-void reset_net_frame_buff(net_frame_buff_t *net_frame_buff){
-    reset_buffer(net_frame_buff->net_buff);
-    net_frame_buff->head_flag = 0;
-    net_frame_buff->tail_flag = 0;
-
-    net_frame_buff->head_position = 0;
-    net_frame_buff->tail_position = 0;
 }
