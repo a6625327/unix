@@ -27,3 +27,31 @@ sudo passwd ftpuser
 mkdir /home/ftpuser/ftp 
 chmod 777 -R /home/username/ftp 
 usermod -s /sbin/nologin ftpuser
+
+
++utf8_filesystem=YES
++userlist_enable=YES
++userlist_deny=NO
++userlist_file=/etc/vsftpd.user_list
++allow_writeable_chroot=YES
+
+#???ftp?? 
+$ sudo mkdir /home/ftpdir 
+#???? 
+$ sudo useradd -d /home/ftpdir -s /bin/bash ftpuser 
+#?????? 
+$ sudo passwd ftpuser 
+#??ftp?????? 
+$ sudo chown ftpuser:ftpuser /home/ftpdir
+
+
+
+#????/etc/vsftpd.user_list?????????ftp????
+$ sudo touch /etc/vsftpd.user_list 
+$ sudo vim /etc/vsftpd.user_list
+
+#????/etc/vsftpd.chroot_list???????????????
+$ sudo touch /etc/vsftpd.chroot_list 
+$ sudo vim /etc/vsftpd.chroot_list
+
+sudo service vsftpd restart
