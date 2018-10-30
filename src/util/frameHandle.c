@@ -276,7 +276,7 @@ int8_t switch_buff2frame_struct(void *buf, size_t buf_len, frame_t *f){
 	}
     memcpy(f->data, &tmp->data, f->data_len);
     // &tmp->data 类型为 uint8_t **， 加减操作的跨度是一个sizeof(uint8_t *)的长度，通常是8个字节，因此会造成解析crc字段的错误，也读取不到尾部
-    // 所以需要将&tmp->data强行转为(uint8_t *)指针，这样加减操作才是一个sizeof(uint8_t)的长度，通常一个字节
+    // 所以需要将&tmp->data强行转为(uint8_t *)指针，这样加减指针操作才是一个sizeof(uint8_t)的长度，通常一个字节
     f->crc = *((uint16_t *)((uint8_t *)&tmp->data + f->data_len));
     f->tail = *((uint8_t *)((uint8_t *)&tmp->data + f->data_len + sizeof(tmp->crc)));
 }
