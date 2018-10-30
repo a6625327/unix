@@ -8,15 +8,14 @@
 #ifndef   ring_queue_H
 #define   ring_queue_H
 
-// for log
-#include "userLog.h"
 
 // for pthread
 #include <pthread.h>
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <semaphore.h>
+
+#include "userLog.h"
 #include "common.h"
 /*
 ********************************************************************************************

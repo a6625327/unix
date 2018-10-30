@@ -1,11 +1,11 @@
 #ifndef __LOCK_MGR_H__
 #define __LOCK_MGR_H__
 
-#include "userLog.h"
-#include "buffer.h"
-
 #include <stdio.h>
 #include <pthread.h>
+
+#include "userLog.h"
+#include "buffer.h"
 
 #define LOCK_NUM 5
 

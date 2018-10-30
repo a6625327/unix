@@ -6,16 +6,9 @@
 // c stdlib
 #include <stdio.h>
 #include <errno.h>
-
-// for inet_ntoa()
 #include <arpa/inet.h>
-
-// for strerror()
 #include <string.h>
-// #include <bits/stdint-intn.h>
-// #include <bits/stdint-uintn.h>
 #include <semaphore.h>
-
 #include <pthread.h>
 
 #include "common.h"
