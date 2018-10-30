@@ -20,3 +20,10 @@ dasjdaskjl
         </div>
     </div>
 </body>
+
+mkdir /home/ftpuser 
+sudo useradd ftpuser -g ftpgroup -d /home/ftpuser -m 
+sudo passwd ftpuser 
+mkdir /home/ftpuser/ftp 
+chmod 777 -R /home/username/ftp 
+usermod -s /sbin/nologin ftpuser
