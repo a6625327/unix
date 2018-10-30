@@ -6,9 +6,6 @@
 
 zlog_category_t *log_cat;
 
-// zlog_category_t *log_all;
-// zlog_category_t *log_recv_test;
-// zlog_category_t *log_send_test;
 zlog_category_t *log_discard_file;
 
 #define LOG_FUN           zlog_debug(log_cat, "===== IN FUNCTION: [%s()] =====", __FUNCTION__)

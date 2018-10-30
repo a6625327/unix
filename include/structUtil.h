@@ -14,21 +14,14 @@
 
 typedef unsigned char bool;
 
-/*========== 结构体声明 =================*/
-// 该结构储存套接字id以及其地址信息
+/*****************************************************************************
+    结构体描述：包含套接字信息
+    socket_no：套接字描述符
+    addr_in：包含套接字对应的网络地址信息
+*****************************************************************************/
 struct socket_info{
     int socket_no;
     struct sockaddr_in *addr_in;
 };
-
-// call function
-typedef void (*cb_fn)(void *preserve, void *arg);
-
-typedef struct cb_struct{
-    cb_fn cb;
-    void *arg;
-}CB_t;
-
-
 
 #endif // !__STRUCT_UTIL_H__

@@ -20,7 +20,7 @@ int8_t write_buf_to_file(void *data, size_t len, FILE *fp){
 }
 
 // **buf 需要 free
-uint8_t read_buff_from_file(FILE *fp, uint8_t **buf, size_t *file_size){
+uint8_t read_file_to_buff(FILE *fp, uint8_t **buf, size_t *file_size){
     LOG_FUN;
 
     int send_len = 0;

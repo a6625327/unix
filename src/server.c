@@ -95,7 +95,7 @@ void *send_thread(void *arg){
 
             uint8_t *file_buf;
             size_t file_len;
-            uint8_t read_ret = read_buff_from_file(f_info->fp, &file_buf, &file_len);
+            uint8_t read_ret = read_file_to_buff(f_info->fp, &file_buf, &file_len);
             if(read_ret != 0){
                 zlog_error(log_all, "read file fail, file info:");
                 print_error_fileinfo_struct(f_info);
