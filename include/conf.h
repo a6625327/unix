@@ -15,6 +15,7 @@ struct conf_struct{
     const char *src_ip;
     const char *dest_ip;
     const char *serv_init_ip;
+    const char *ftp_path;
 };
 
 /*****************************************************************************

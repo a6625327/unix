@@ -5,19 +5,22 @@ struct conf_struct CONF;
 
 // 读取配置文件后的回调函数
 void conf_cb(){
-    CONF.src_ip = get_conf_string("src:ip", "null");
-    CONF.dest_ip = get_conf_string("dest:ip", "null");
-    CONF.serv_init_ip = get_conf_string("serv_init:ip", "null");
+    CONF.src_ip = get_conf_string("src:ip", NULL);
+    CONF.dest_ip = get_conf_string("dest:ip", NULL);
+    CONF.serv_init_ip = get_conf_string("serv_init:ip", NULL);
 
     CONF.src_port = get_conf_int("src:port", -1);
     CONF.dest_port = get_conf_int("dest:port", -1);
     CONF.serv_init_port = get_conf_int("serv_init:port", -1);
+    CONF.ftp_path = get_conf_string("ftp_dir:path", NULL);
 
     zlog_info(log_cat, "****CONF LIST START:****");
     zlog_info(log_cat, "    dest:ip: %s", CONF.dest_ip);
     zlog_info(log_cat, "    dest:port: %d", CONF.dest_port);
     zlog_info(log_cat, "    serv_init:ip: %s", CONF.serv_init_ip);
     zlog_info(log_cat, "    serv_init:port: %d", CONF.serv_init_port);
+    zlog_info(log_cat, "    ftp_dir:path: %s", CONF.ftp_path);
+    
     zlog_info(log_cat, "****CONF LIST EDN   ****");
 }
 
